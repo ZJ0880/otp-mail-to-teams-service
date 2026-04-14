@@ -4,13 +4,12 @@ Servicio backend en NestJS que lee correos reenviados con OTP desde una cuenta d
 
 ## Caracteristicas
 
-- Lectura automatica de correos no leidos por IMAP.
+- Lectura automatica de correos IMAP (Gmail).
 - Filtrado por remitentes y palabras clave de asunto.
-- Extraccion de OTP por patrones regex configurables.
-- Validacion de vigencia por TTL.
+- Extraccion de OTP con regex configurables.
+- Validacion de vigencia (TTL).
 - Publicacion en Teams via webhook.
-- Logs por ciclo y por mensaje para trazabilidad.
-- Arquitectura basada en puertos y adaptadores para facilitar pruebas y cambios.
+- Logs en cada ciclo y mensaje.
 
 ## Requisitos
 
@@ -64,37 +63,27 @@ npm test
 
 ## Estructura
 
-- `src/config`: validacion y acceso tipado de configuracion.
-- `src/mail`: puerto de lectura y adaptador IMAP.
-- `src/otp`: extraccion y validacion de OTP.
-- `src/teams`: puerto de notificacion y adaptador webhook.
-- `src/workflow`: orquestacion del caso de uso y polling.
+```
+src/
+  config/       - env y configuracion tipada
+  mail/         - lectura IMAP
+  otp/          - extraccion y validacion
+  teams/        - webhook de Teams
+  workflow/     - orquestacion y polling
+```
 
-## Flujo funcional
+## Flujo
 
-1. `MailPollingService` ejecuta ciclos periodicos.
-2. `ImapMailReaderService` obtiene mensajes no leidos.
-3. `OtpProcessingService` filtra, extrae y valida OTP.
-4. `TeamsWebhookNotifierService` envia mensaje a Teams.
-5. Si el proceso de un correo termina (relevante o no), se marca como leido.
-6. Si falla el envio a Teams, no se marca como leido para reintento en el siguiente ciclo.
+1. Poll periodico para traer correos no leidos.
+2. Filtra por remitente y palabras clave.
+3. Extrae OTP del asunto o cuerpo.
+4. Valida vigencia (TTL).
+5. Envia a Teams.
+6. Marca como leido.
 
-## Seguridad recomendada
+## Seguridad
 
-- Usa contrasena de aplicacion en Gmail (no la principal).
-- Restringe webhook por canal dedicado y controla miembros del canal.
-- No publiques OTP en logs.
-- Maneja secretos con Azure Key Vault / GitHub Secrets / gestor equivalente.
-
-## Principios de diseno aplicados
-
-- **SRP**: cada servicio tiene una responsabilidad clara.
-- **OCP**: puertos para cambiar IMAP o Teams sin tocar logica de negocio.
-- **LSP/ISP**: contratos pequenos por dominio (`MailReaderPort`, `TeamsNotifierPort`).
-- **DIP**: el workflow depende de interfaces, no de implementaciones concretas.
-
-## Proximos pasos sugeridos
-
-- Agregar store de idempotencia por `messageId`.
-- Agregar metricas (Prometheus/OpenTelemetry).
-- Agregar pruebas de integracion con servidor IMAP de test.
+- Usa app password de Gmail (no la principal).
+- Webhook en canal privado de Teams.
+- No loguear OTP.
+- Maneja secretos en gestor seguro (Vault, .env local, Secrets).
