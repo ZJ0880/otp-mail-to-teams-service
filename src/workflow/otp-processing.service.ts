@@ -5,6 +5,7 @@ import { MAIL_READER_PORT, MailReaderPort } from "../mail/domain/mail-reader.por
 import { OtpExtractorService } from "../otp/application/otp-extractor.service";
 import { OtpValidatorService } from "../otp/application/otp-validator.service";
 import { TEAMS_NOTIFIER_PORT, TeamsNotifierPort } from "../teams/domain/teams-notifier.port";
+import { MetricsService } from "../observability/metrics.service";
 
 @Injectable()
 export class OtpProcessingService {
@@ -16,12 +17,14 @@ export class OtpProcessingService {
     private readonly otpExtractorService: OtpExtractorService,
     private readonly otpValidatorService: OtpValidatorService,
     private readonly appConfigService: AppConfigService,
+    private readonly metricsService: MetricsService,
   ) {}
 
   async processUnreadMessages(): Promise<void> {
     this.logger.log("Starting unread message processing batch.");
     const messages = await this.mailReader.fetchUnreadMessages();
     this.logger.log(`Unread messages fetched: ${messages.length}`);
+    this.metricsService.recordGauge("messages.unread_count", messages.length);
 
     if (messages.length === 0) {
       this.logger.log("No unread messages found.");
@@ -46,6 +49,7 @@ export class OtpProcessingService {
         this.logger.log(`[${traceId}] Message ignored by filter.`);
         await this.mailReader.acknowledgeMessage(message.uid);
         this.logger.log(`[${traceId}] Message marked as read after filter.`);
+        this.metricsService.recordCounter("otp.filtered");
         return;
       }
 
@@ -54,6 +58,7 @@ export class OtpProcessingService {
         this.logger.warn(`[${traceId}] No OTP found in message.`);
         await this.mailReader.acknowledgeMessage(message.uid);
         this.logger.log(`[${traceId}] Message marked as read after no OTP match.`);
+        this.metricsService.recordCounter("otp.not_found");
         return;
       }
 
@@ -65,6 +70,7 @@ export class OtpProcessingService {
         this.logger.warn(`[${traceId}] OTP expired.`);
         await this.mailReader.acknowledgeMessage(message.uid);
         this.logger.log(`[${traceId}] Message marked as read after expiry check.`);
+        this.metricsService.recordCounter("otp.expired");
         return;
       }
 
@@ -84,9 +90,11 @@ export class OtpProcessingService {
       this.logger.log(
         `[${traceId}] OTP published. source=${extracted.extractedFrom} pattern=${extracted.matchedPattern}`,
       );
+      this.metricsService.recordCounter("otp.sent");
     } catch (error) {
       const messageError = error instanceof Error ? error.message : String(error);
       this.logger.error(`[${traceId}] Processing failed: ${messageError}`);
+      this.metricsService.recordCounter("otp.error");
     }
   }
 

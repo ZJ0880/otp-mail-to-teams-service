@@ -6,6 +6,7 @@ import { MailModule } from "./mail/mail.module";
 import { OtpModule } from "./otp/otp.module";
 import { TeamsModule } from "./teams/teams.module";
 import { WorkflowModule } from "./workflow/workflow.module";
+import { ObservabilityModule } from "./observability/observability.module";
 
 @Module({
   imports: [
@@ -18,6 +19,7 @@ import { WorkflowModule } from "./workflow/workflow.module";
     OtpModule,
     TeamsModule,
     WorkflowModule,
+    ObservabilityModule,
   ],
 })
 export class AppModule {}

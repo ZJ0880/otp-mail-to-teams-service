@@ -1,6 +1,9 @@
 import { Injectable, Logger, OnModuleDestroy, OnModuleInit } from "@nestjs/common";
 import { AppConfigService } from "../config/app-config.service";
 import { OtpProcessingService } from "./otp-processing.service";
+import { MetricsService } from "../observability/metrics.service";
+import { HealthCheckService } from "../observability/health-check.service";
+import { RateLimiterService } from "../observability/rate-limiter.service";
 
 @Injectable()
 export class MailPollingService implements OnModuleInit, OnModuleDestroy {
@@ -11,6 +14,9 @@ export class MailPollingService implements OnModuleInit, OnModuleDestroy {
   constructor(
     private readonly otpProcessingService: OtpProcessingService,
     private readonly appConfigService: AppConfigService,
+    private readonly metricsService: MetricsService,
+    private readonly healthCheckService: HealthCheckService,
+    private readonly rateLimiterService: RateLimiterService,
   ) {}
 
   async onModuleInit(): Promise<void> {
@@ -37,6 +43,13 @@ export class MailPollingService implements OnModuleInit, OnModuleDestroy {
   private async executeCycle(): Promise<void> {
     if (this.running) {
       this.logger.warn("Skipping cycle because previous cycle is still running.");
+      this.metricsService.recordCounter("polling.skipped");
+      return;
+    }
+
+    if (!this.rateLimiterService.isAllowed()) {
+      this.logger.warn("Rate limit exceeded, skipping cycle.");
+      this.metricsService.recordCounter("polling.rate_limited");
       return;
     }
 
@@ -48,6 +61,18 @@ export class MailPollingService implements OnModuleInit, OnModuleDestroy {
       await this.otpProcessingService.processUnreadMessages();
       const durationMs = Date.now() - startedAt;
       this.logger.log(`Polling cycle finished in ${durationMs} ms.`);
+      
+      this.metricsService.recordHistogram("polling.duration_ms", durationMs);
+      this.metricsService.recordCounter("polling.completed");
+      this.healthCheckService.recordCycleCheck("ok", durationMs);
+    } catch (error) {
+      const durationMs = Date.now() - startedAt;
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      this.logger.error(`Polling cycle failed after ${durationMs}ms: ${errorMessage}`);
+      
+      this.metricsService.recordCounter("polling.failed");
+      this.metricsService.recordHistogram("polling.duration_ms", durationMs);
+      this.healthCheckService.recordCycleCheck("error", durationMs);
     } finally {
       this.running = false;
     }
