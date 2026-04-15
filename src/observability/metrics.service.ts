@@ -23,33 +23,21 @@ export class MetricsService {
   private readonly metrics: Map<string, Metric[]> = new Map();
   private readonly maxMetricsPerName = 1000;
 
-  /**
-   * Record a counter metric (increment by 1 or custom value)
-   */
   recordCounter(name: string, value: number = 1, tags?: Record<string, string>): void {
     this.addMetric(name, value, tags);
     this.logger.debug(`Counter: ${name}=${value}`, { tags });
   }
 
-  /**
-   * Record a gauge metric (snapshot value)
-   */
   recordGauge(name: string, value: number, tags?: Record<string, string>): void {
     this.addMetric(name, value, tags);
     this.logger.debug(`Gauge: ${name}=${value}`, { tags });
   }
 
-  /**
-   * Record a histogram metric (duration, latency, etc.)
-   */
   recordHistogram(name: string, value: number, tags?: Record<string, string>): void {
     this.addMetric(name, value, tags);
     this.logger.debug(`Histogram: ${name}=${value}ms`, { tags });
   }
 
-  /**
-   * Get aggregated metrics summary
-   */
   getSummary(): Record<string, MetricSummary> {
     const summary: Record<string, MetricSummary> = {};
 
@@ -78,9 +66,6 @@ export class MetricsService {
     return summary;
   }
 
-  /**
-   * Reset all metrics
-   */
   reset(): void {
     this.metrics.clear();
     this.logger.log("All metrics reset");
@@ -99,7 +84,6 @@ export class MetricsService {
       tags,
     });
 
-    // Keep only recent metrics to avoid memory overflow
     if (metricList.length > this.maxMetricsPerName) {
       metricList.shift();
     }

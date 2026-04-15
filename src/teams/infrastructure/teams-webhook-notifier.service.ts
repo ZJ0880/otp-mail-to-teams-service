@@ -65,7 +65,6 @@ export class TeamsWebhookNotifierService implements TeamsNotifierPort {
       this.logger.log("Code sent to Teams successfully using adaptive card payload.");
       this.logger.log(`[SENT][OTP] ${payload.otp}`);
     } catch {
-      // Fallback for classic incoming webhook endpoints.
       this.logger.warn("Adaptive card payload failed, using plain text fallback.");
       await axios.post(
         webhookUrl,

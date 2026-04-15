@@ -20,34 +20,22 @@ export class HealthCheckService {
   private lastCycleCheck: { status: "ok" | "error"; timestamp: Date } | null = null;
   private cycleDuration: number = 0;
 
-  /**
-   * Record IMAP connectivity status
-   */
   recordImapCheck(status: "ok" | "error"): void {
     this.lastImapCheck = { status, timestamp: new Date() };
     this.logger.debug(`IMAP health check: ${status}`);
   }
 
-  /**
-   * Record Teams webhook status
-   */
   recordTeamsCheck(status: "ok" | "error"): void {
     this.lastTeamsCheck = { status, timestamp: new Date() };
     this.logger.debug(`Teams health check: ${status}`);
   }
 
-  /**
-   * Record polling cycle status
-   */
   recordCycleCheck(status: "ok" | "error", durationMs: number): void {
     this.lastCycleCheck = { status, timestamp: new Date() };
     this.cycleDuration = durationMs;
     this.logger.debug(`Cycle health check: ${status} (${durationMs}ms)`);
   }
 
-  /**
-   * Get full health status
-   */
   getHealth(): HealthCheckResult {
     const checks: Record<string, CheckInfo> = {
       imap: this.buildImapCheck(),
@@ -122,9 +110,6 @@ export class HealthCheckService {
     return "healthy";
   }
 
-  /**
-   * Reset health checks
-   */
   reset(): void {
     this.lastImapCheck = null;
     this.lastTeamsCheck = null;

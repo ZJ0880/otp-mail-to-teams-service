@@ -18,19 +18,13 @@ export class RateLimiterService {
     };
   }
 
-  /**
-   * Check if a new request is allowed
-   * Returns true if within limits, false if should be throttled
-   */
   isAllowed(): boolean {
     const now = Date.now();
     const oneMinuteAgo = now - 60 * 1000;
     const oneHourAgo = now - 60 * 60 * 1000;
 
-    // Remove old timestamps
     this.requestTimestamps = this.requestTimestamps.filter((ts) => ts > oneHourAgo);
 
-    // Check minute limit
     const lastMinuteRequests = this.requestTimestamps.filter((ts) => ts > oneMinuteAgo).length;
     if (lastMinuteRequests >= this.config.maxRequestsPerMinute) {
       this.logger.warn(
@@ -39,7 +33,6 @@ export class RateLimiterService {
       return false;
     }
 
-    // Check hour limit
     if (this.requestTimestamps.length >= this.config.maxRequestsPerHour) {
       this.logger.warn(
         `Rate limit exceeded (per hour): ${this.requestTimestamps.length}/${this.config.maxRequestsPerHour}`,
@@ -51,9 +44,6 @@ export class RateLimiterService {
     return true;
   }
 
-  /**
-   * Get current request counts
-   */
   getStatus(): {
     lastMinuteRequests: number;
     lastHourRequests: number;
@@ -72,17 +62,11 @@ export class RateLimiterService {
     };
   }
 
-  /**
-   * Update rate limit configuration
-   */
   setConfig(config: Partial<RateLimitConfig>): void {
     this.config = { ...this.config, ...config };
     this.logger.log(`Rate limiter config updated`, { config: this.config });
   }
 
-  /**
-   * Reset rate limiter
-   */
   reset(): void {
     this.requestTimestamps = [];
     this.logger.log("Rate limiter reset");

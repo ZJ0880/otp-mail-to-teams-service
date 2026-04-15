@@ -18,9 +18,6 @@ export class RetryableError extends Error {
   }
 }
 
-/**
- * Decorator for retryable operations with exponential backoff
- */
 export function Retryable(config: Partial<RetryConfig> = {}) {
   const defaultConfig: RetryConfig = {
     maxRetries: 3,
@@ -65,9 +62,6 @@ export function Retryable(config: Partial<RetryConfig> = {}) {
   };
 }
 
-/**
- * Circuit breaker pattern for external service calls
- */
 export class CircuitBreaker {
   private state: "closed" | "open" | "half-open" = "closed";
   private failureCount = 0;
