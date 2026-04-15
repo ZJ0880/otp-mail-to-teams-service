@@ -86,16 +86,12 @@ export class TeamsWebhookNotifierService implements TeamsNotifierPort {
     const month = String(date.getMonth() + 1).padStart(2, "0");
     const year = String(date.getFullYear()).slice(-2);
 
-    let hours = date.getHours();
+    const hours = date.getHours();
     const minutes = String(date.getMinutes()).padStart(2, "0");
     const period = hours >= 12 ? "PM" : "AM";
 
-    hours %= 12;
-    if (hours === 0) {
-      hours = 12;
-    }
-
-    const hourText = String(hours).padStart(2, "0");
+    const hour12 = hours % 12 || 12;
+    const hourText = String(hour12).padStart(2, "0");
     return `${day}/${month}/${year} ${hourText}:${minutes} ${period}`;
   }
 
