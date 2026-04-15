@@ -78,7 +78,9 @@ export class TeamsWebhookNotifierService implements TeamsNotifierPort {
   }
 
   private normalizeTemplate(template: string): string {
-    return template.replaceAll("\\\\n", "\n").replaceAll("\\\\t", "\t");
+    const escapedNewline = String.raw`\n`;
+    const escapedTab = String.raw`\t`;
+    return template.replaceAll(escapedNewline, "\n").replaceAll(escapedTab, "\t");
   }
 
   private formatReceivedAt(date: Date): string {

@@ -39,7 +39,7 @@ export class ImapMailReaderService implements MailReaderPort, OnModuleDestroy {
             internalDate: true,
           });
 
-          if (!message || !message.source) {
+          if (message === false || !message?.source) {
             return null;
           }
 
