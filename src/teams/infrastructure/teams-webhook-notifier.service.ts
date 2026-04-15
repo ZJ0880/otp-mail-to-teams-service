@@ -88,7 +88,30 @@ export class TeamsWebhookNotifierService implements TeamsNotifierPort {
   }
 
   private removeRedundantAlertTitle(messageText: string): string {
-    return messageText.replace(/^(\*\*)?\s*(ALERTA OTP|OTP ALERT)\s*(\*\*)?\s*(\r?\n)+/i, "");
+    const trimmedStart = messageText.trimStart();
+    const uppercaseText = trimmedStart.toUpperCase();
+    const titleCandidates = ["ALERTA OTP", "OTP ALERT", "**ALERTA OTP**", "**OTP ALERT**"];
+
+    let cleaned = trimmedStart;
+    let removedTitle = false;
+
+    for (const title of titleCandidates) {
+      if (uppercaseText.startsWith(title)) {
+        cleaned = trimmedStart.slice(title.length);
+        removedTitle = true;
+        break;
+      }
+    }
+
+    if (!removedTitle) {
+      return messageText;
+    }
+
+    while (cleaned.startsWith("\r") || cleaned.startsWith("\n")) {
+      cleaned = cleaned.slice(1);
+    }
+
+    return cleaned;
   }
 
   private formatReceivedAt(date: Date): string {
