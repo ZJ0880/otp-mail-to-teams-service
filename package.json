@@ -7,7 +7,7 @@
     "build": "tsc -p tsconfig.build.json",
     "start": "node dist/main.js",
     "start:dev": "ts-node -r tsconfig-paths/register src/main.ts",
-    "lint": "eslint . --ext .ts",
+    "lint": "eslint . --ext .ts --ignore-pattern eslint.config.ts",
     "test": "jest",
     "test:watch": "jest --watch",
     "test:cov": "jest --coverage"
@@ -44,6 +44,7 @@
     "@typescript-eslint/parser": "^8.58.2",
     "eslint": "^10.2.0",
     "jest": "^30.3.0",
+    "jiti": "^2.6.1",
     "supertest": "^7.2.2",
     "ts-jest": "^29.4.9",
     "ts-node": "^10.9.2",
