@@ -13,24 +13,20 @@ describe("RateLimiterService", () => {
 
   describe("isAllowed", () => {
     it("allows requests within per-minute limit", () => {
-      // Default is 60 per minute
       for (let i = 0; i < 60; i++) {
         expect(service.isAllowed()).toBe(true);
       }
 
-      // 61st request should be rejected
       expect(service.isAllowed()).toBe(false);
     });
 
     it("allows new requests after timeout", (done) => {
-      // Fill minute quota
       for (let i = 0; i < 60; i++) {
         service.isAllowed();
       }
 
       expect(service.isAllowed()).toBe(false);
 
-      // Wait 60ms (simulating 1 second passed), reset in 1 second
       setTimeout(() => {
         service.reset();
         expect(service.isAllowed()).toBe(true);

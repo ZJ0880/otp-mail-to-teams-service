@@ -27,24 +27,21 @@ describe("CircuitBreaker", () => {
         throw new Error("Service error");
       };
 
-      // Trigger failures
       for (let i = 0; i < 3; i++) {
         try {
           await breaker.execute(mockFn);
         } catch {
-          // Expected
         }
       }
 
       expect(breaker.getState()).toBe("open");
 
-      // Fourth call should fail immediately
       try {
         await breaker.execute(mockFn);
         fail("Should have thrown circuit open error");
       } catch (error) {
         expect((error as Error).message).toContain("Circuit breaker");
-        expect(callCount).toBe(3); // Should not call function again
+        expect(callCount).toBe(3);
       }
     });
 
@@ -53,32 +50,26 @@ describe("CircuitBreaker", () => {
         throw new Error("Service error");
       };
 
-      // Open circuit
       for (let i = 0; i < 3; i++) {
         try {
           await breaker.execute(mockFn);
         } catch {
-          // Expected
         }
       }
 
       expect(breaker.getState()).toBe("open");
 
-      // Wait for timeout
       await new Promise((resolve) => setTimeout(resolve, 150));
 
-      // Next call should transition to half-open and attempt execution
       const mockFnSuccess = async () => {
         return "success";
       };
 
       breaker = new CircuitBreaker("test-service", 3, 100);
-      // Simulate open state
       for (let i = 0; i < 3; i++) {
         try {
           await breaker.execute(mockFn);
         } catch {
-          // Expected
         }
       }
 
@@ -94,19 +85,16 @@ describe("CircuitBreaker", () => {
         throw new Error("Service error");
       };
 
-      // Open circuit
       for (let i = 0; i < 3; i++) {
         try {
           await breaker.execute(mockFnFail);
         } catch {
-          // Expected
         }
       }
 
       expect(breaker.getState()).toBe("open");
       breaker.reset();
 
-      // Circuit should now be closed
       expect(breaker.getState()).toBe("closed");
     });
   });
@@ -127,7 +115,6 @@ describe("CircuitBreaker", () => {
         try {
           await breaker.execute(mockFn);
         } catch {
-          // Expected
         }
       }
 
