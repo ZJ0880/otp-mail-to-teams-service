@@ -23,6 +23,8 @@ export class TeamsWebhookNotifierService implements TeamsNotifierPort {
       .replaceAll("{subject}", payload.subject.trim())
       .replaceAll("{receivedAt}", receivedAt);
 
+    const cleanedMessageText = this.removeRedundantAlertTitle(messageText);
+
     const adaptiveCard = {
       $schema: "https://adaptivecards.io/schemas/adaptive-card.json",
       type: "AdaptiveCard",
@@ -30,14 +32,14 @@ export class TeamsWebhookNotifierService implements TeamsNotifierPort {
       body: [
         {
           type: "TextBlock",
-          text: "OTP ALERT",
+          text: "ALERTA OTP",
           size: "Medium",
           weight: "Bolder",
           wrap: true,
         },
         {
           type: "TextBlock",
-          text: messageText,
+          text: cleanedMessageText,
           wrap: true,
         },
       ],
@@ -61,19 +63,21 @@ export class TeamsWebhookNotifierService implements TeamsNotifierPort {
         timeout: 7000,
       });
       this.logger.log("Code sent to Teams successfully using adaptive card payload.");
+      this.logger.log(`[SENT][OTP] ${payload.otp}`);
     } catch {
       // Fallback for classic incoming webhook endpoints.
       this.logger.warn("Adaptive card payload failed, using plain text fallback.");
       await axios.post(
         webhookUrl,
         {
-          text: messageText,
+          text: cleanedMessageText,
         },
         {
           timeout: 7000,
         },
       );
       this.logger.log("Code sent to Teams successfully using plain text fallback.");
+      this.logger.log(`[SENT][OTP] ${payload.otp}`);
     }
   }
 
@@ -81,6 +85,10 @@ export class TeamsWebhookNotifierService implements TeamsNotifierPort {
     const escapedNewline = String.raw`\n`;
     const escapedTab = String.raw`\t`;
     return template.replaceAll(escapedNewline, "\n").replaceAll(escapedTab, "\t");
+  }
+
+  private removeRedundantAlertTitle(messageText: string): string {
+    return messageText.replace(/^(\*\*)?\s*(ALERTA OTP|OTP ALERT)\s*(\*\*)?\s*(\r?\n)+/i, "");
   }
 
   private formatReceivedAt(date: Date): string {
