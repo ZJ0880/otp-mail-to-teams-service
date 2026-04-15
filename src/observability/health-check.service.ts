@@ -7,6 +7,10 @@ export interface HealthCheckResult {
   uptime: number;
 }
 
+type CheckStatus = "ok" | "warning" | "error";
+type CheckInfo = { status: CheckStatus; message?: string };
+type LastCheck = { status: "ok" | "error"; timestamp: Date };
+
 @Injectable()
 export class HealthCheckService {
   private readonly logger = new Logger(HealthCheckService.name);
@@ -45,51 +49,13 @@ export class HealthCheckService {
    * Get full health status
    */
   getHealth(): HealthCheckResult {
-    const checks: Record<string, { status: "ok" | "warning" | "error"; message?: string }> = {};
+    const checks: Record<string, CheckInfo> = {
+      imap: this.buildImapCheck(),
+      teams: this.buildTeamsCheck(),
+      cycle: this.buildCycleCheck(),
+    };
 
-    // IMAP check
-    if (this.lastImapCheck) {
-      checks.imap = {
-        status: this.lastImapCheck.status === "ok" ? "ok" : "error",
-        message:
-          this.lastImapCheck.status === "ok"
-            ? "IMAP connection ok"
-            : `IMAP check failed at ${this.lastImapCheck.timestamp.toISOString()}`,
-      };
-    } else {
-      checks.imap = { status: "warning", message: "No IMAP check performed yet" };
-    }
-
-    // Teams check
-    if (this.lastTeamsCheck) {
-      checks.teams = {
-        status: this.lastTeamsCheck.status === "ok" ? "ok" : "error",
-        message:
-          this.lastTeamsCheck.status === "ok"
-            ? "Teams webhook ok"
-            : `Teams check failed at ${this.lastTeamsCheck.timestamp.toISOString()}`,
-      };
-    } else {
-      checks.teams = { status: "warning", message: "No Teams check performed yet" };
-    }
-
-    // Cycle check
-    if (this.lastCycleCheck) {
-      checks.cycle = {
-        status: this.lastCycleCheck.status === "ok" ? "ok" : "error",
-        message:
-          this.lastCycleCheck.status === "ok"
-            ? `Last cycle ok (${this.cycleDuration}ms)`
-            : `Cycle failed at ${this.lastCycleCheck.timestamp.toISOString()}`,
-      };
-    } else {
-      checks.cycle = { status: "warning", message: "No cycle performed yet" };
-    }
-
-    // Determine overall status
-    const errorCount = Object.values(checks).filter((c) => c.status === "error").length;
-    const overallStatus =
-      errorCount > 0 ? "unhealthy" : Object.values(checks).some((c) => c.status === "warning") ? "degraded" : "healthy";
+    const overallStatus = this.getOverallStatus(checks);
 
     return {
       status: overallStatus,
@@ -97,6 +63,63 @@ export class HealthCheckService {
       timestamp: new Date(),
       uptime: Date.now() - this.startTime,
     };
+  }
+
+  private buildImapCheck(): CheckInfo {
+    return this.buildStandardCheck(
+      this.lastImapCheck,
+      "No IMAP check performed yet",
+      "IMAP connection ok",
+      (check) => `IMAP check failed at ${check.timestamp.toISOString()}`,
+    );
+  }
+
+  private buildTeamsCheck(): CheckInfo {
+    return this.buildStandardCheck(
+      this.lastTeamsCheck,
+      "No Teams check performed yet",
+      "Teams webhook ok",
+      (check) => `Teams check failed at ${check.timestamp.toISOString()}`,
+    );
+  }
+
+  private buildCycleCheck(): CheckInfo {
+    return this.buildStandardCheck(
+      this.lastCycleCheck,
+      "No cycle performed yet",
+      `Last cycle ok (${this.cycleDuration}ms)`,
+      (check) => `Cycle failed at ${check.timestamp.toISOString()}`,
+    );
+  }
+
+  private buildStandardCheck(
+    check: LastCheck | null,
+    missingMessage: string,
+    successMessage: string,
+    errorMessageFactory: (check: LastCheck) => string,
+  ): CheckInfo {
+    if (!check) {
+      return { status: "warning", message: missingMessage };
+    }
+
+    if (check.status === "ok") {
+      return { status: "ok", message: successMessage };
+    }
+
+    return { status: "error", message: errorMessageFactory(check) };
+  }
+
+  private getOverallStatus(checks: Record<string, CheckInfo>): HealthCheckResult["status"] {
+    const values = Object.values(checks);
+    if (values.some((check) => check.status === "error")) {
+      return "unhealthy";
+    }
+
+    if (values.some((check) => check.status === "warning")) {
+      return "degraded";
+    }
+
+    return "healthy";
   }
 
   /**

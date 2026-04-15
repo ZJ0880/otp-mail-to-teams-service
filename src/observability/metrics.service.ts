@@ -7,10 +7,20 @@ interface Metric {
   tags?: Record<string, string>;
 }
 
+interface MetricSummary {
+  count: number;
+  sum: number;
+  avg: number;
+  min: number;
+  max: number;
+  lastValue: number;
+  lastTimestamp: Date;
+}
+
 @Injectable()
 export class MetricsService {
   private readonly logger = new Logger(MetricsService.name);
-  private metrics: Map<string, Metric[]> = new Map();
+  private readonly metrics: Map<string, Metric[]> = new Map();
   private readonly maxMetricsPerName = 1000;
 
   /**
@@ -40,8 +50,8 @@ export class MetricsService {
   /**
    * Get aggregated metrics summary
    */
-  getSummary(): Record<string, unknown> {
-    const summary: Record<string, unknown> = {};
+  getSummary(): Record<string, MetricSummary> {
+    const summary: Record<string, MetricSummary> = {};
 
     this.metrics.forEach((metricList, name) => {
       if (metricList.length === 0) return;
@@ -52,15 +62,16 @@ export class MetricsService {
       const avg = sum / count;
       const min = Math.min(...values);
       const max = Math.max(...values);
+      const lastMetric = metricList.at(-1)!;
 
       summary[name] = {
         count,
         sum,
-        avg: parseFloat(avg.toFixed(2)),
+        avg: Number.parseFloat(avg.toFixed(2)),
         min,
         max,
-        lastValue: metricList[metricList.length - 1].value,
-        lastTimestamp: metricList[metricList.length - 1].timestamp,
+        lastValue: lastMetric.value,
+        lastTimestamp: lastMetric.timestamp,
       };
     });
 
