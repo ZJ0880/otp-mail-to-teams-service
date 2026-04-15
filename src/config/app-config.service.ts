@@ -61,7 +61,7 @@ export class AppConfigService {
   get teamsMessageTemplate(): string {
     return (
       this.configService.get<string>("TEAMS_MESSAGE_TEMPLATE") ??
-      "OTP ALERT\\n\\nCode: **{otp}**\\nDate: {receivedAt}\\nSender: {from}\\nSubject: {subject}\\n\\nAction: use this code immediately and do not share it."
+      String.raw`OTP ALERT\n\nCode: **{otp}**\nDate: {receivedAt}\nSender: {from}\nSubject: {subject}\n\nAction: use this code immediately and do not share it.`
     );
   }
 

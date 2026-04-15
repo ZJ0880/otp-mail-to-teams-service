@@ -74,11 +74,12 @@ export class ImapMailReaderService implements MailReaderPort, OnModuleDestroy {
   async acknowledgeMessage(uid: string): Promise<void> {
     await this.ensureConnected();
     const client = this.requireClient();
+    const seenFlag = String.raw`\Seen`;
 
     this.logger.log(`Marking message as seen uid=${uid}.`);
     const mailboxLock = await client.getMailboxLock(this.appConfigService.mailMailbox);
     try {
-      await client.messageFlagsAdd(Number(uid), ["\\Seen"]);
+      await client.messageFlagsAdd(Number(uid), [seenFlag]);
       this.logger.log(`Message marked as seen uid=${uid}.`);
     } finally {
       mailboxLock.release();
