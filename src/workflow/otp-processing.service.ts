@@ -21,13 +21,13 @@ export class OtpProcessingService {
   ) {}
 
   async processUnreadMessages(): Promise<void> {
-    this.logger.log("Starting unread message processing batch.");
+    this.logger.log("Starting unread message processing.");
     const messages = await this.mailReader.fetchUnreadMessages();
     this.logger.log(`Unread messages fetched: ${messages.length}`);
     this.metricsService.recordGauge("messages.unread_count", messages.length);
 
     if (messages.length === 0) {
-      this.logger.log("No unread messages found.");
+      this.logger.log("No new messages found.");
       return;
     }
 
@@ -38,7 +38,7 @@ export class OtpProcessingService {
       await this.processSingleMessage(message);
     }
 
-    this.logger.log("Unread message processing batch completed.");
+    this.logger.log("Unread message processing completed.");
   }
 
   private async processSingleMessage(message: MailMessage): Promise<void> {
@@ -63,7 +63,7 @@ export class OtpProcessingService {
       }
 
       this.logger.log(
-        `[${traceId}] OTP pattern matched from ${extracted.extractedFrom} using ${extracted.matchedPattern}.`,
+        `[${traceId}] OTP detected from ${extracted.extractedFrom} using pattern ${extracted.matchedPattern}.`,
       );
 
       if (!this.otpValidatorService.isCurrent(message.receivedAt)) {
@@ -74,7 +74,11 @@ export class OtpProcessingService {
         return;
       }
 
-      this.logger.log(`[${traceId}] OTP is current and ready to send.`);
+      this.logger.log(`[${traceId}] OTP is valid and ready to send.`);
+
+      this.logger.log(
+        `[${traceId}] Sending code to Teams. code=${extracted.code} source=${extracted.extractedFrom}`,
+      );
 
       await this.teamsNotifier.send({
         otp: extracted.code,
@@ -83,12 +87,15 @@ export class OtpProcessingService {
         receivedAt: message.receivedAt,
       });
 
-      this.logger.log(`[${traceId}] OTP sent to Teams webhook.`);
+      this.logger.log(
+        `[${traceId}] Code sent to Teams successfully. subject=${message.subject} receivedAt=${message.receivedAt.toISOString()}`,
+      );
+      this.logger.log(`[${traceId}] [SENT][OTP] ${extracted.code}`);
       await this.mailReader.acknowledgeMessage(message.uid);
       this.logger.log(`[${traceId}] Message marked as read after successful delivery.`);
 
       this.logger.log(
-        `[${traceId}] OTP published. source=${extracted.extractedFrom} pattern=${extracted.matchedPattern}`,
+        `[${traceId}] Code published. source=${extracted.extractedFrom} pattern=${extracted.matchedPattern}`,
       );
       this.metricsService.recordCounter("otp.sent");
     } catch (error) {

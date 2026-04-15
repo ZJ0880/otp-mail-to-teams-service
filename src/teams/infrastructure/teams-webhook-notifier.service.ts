@@ -13,50 +13,57 @@ export class TeamsWebhookNotifierService implements TeamsNotifierPort {
     const webhookUrl = this.ensureHttpsUrl(this.appConfigService.teamsWebhookUrl);
     const receivedAt = this.formatReceivedAt(payload.receivedAt);
 
+    this.logger.log(
+      `Preparing Teams notification. sender=${payload.from.trim()} subject=${payload.subject.trim()} receivedAt=${receivedAt} code=${payload.otp}`,
+    );
+
     const messageText = this.normalizeTemplate(this.appConfigService.teamsMessageTemplate)
       .replaceAll("{otp}", payload.otp)
       .replaceAll("{from}", payload.from.trim())
       .replaceAll("{subject}", payload.subject.trim())
       .replaceAll("{receivedAt}", receivedAt);
 
+    const adaptiveCard = {
+      $schema: "https://adaptivecards.io/schemas/adaptive-card.json",
+      type: "AdaptiveCard",
+      version: "1.4",
+      body: [
+        {
+          type: "TextBlock",
+          text: "OTP ALERT",
+          size: "Medium",
+          weight: "Bolder",
+          wrap: true,
+        },
+        {
+          type: "TextBlock",
+          text: messageText,
+          wrap: true,
+        },
+      ],
+    };
+
     const workflowPayload = {
       type: "message",
+      body: adaptiveCard,
       attachments: [
         {
           contentType: "application/vnd.microsoft.card.adaptive",
           contentUrl: null,
-          content: {
-            $schema: "https://adaptivecards.io/schemas/adaptive-card.json",
-            type: "AdaptiveCard",
-            version: "1.4",
-            body: [
-              {
-                type: "TextBlock",
-                text: "OTP ALERTA",
-                size: "Medium",
-                weight: "Bolder",
-                wrap: true,
-              },
-              {
-                type: "TextBlock",
-                text: messageText,
-                wrap: true,
-              },
-            ],
-          },
+          content: adaptiveCard,
         },
       ],
     };
 
     try {
-      this.logger.log("Sending OTP notification to Teams webhook.");
+      this.logger.log("Sending code to Teams using adaptive card payload.");
       await axios.post(webhookUrl, workflowPayload, {
         timeout: 7000,
       });
-      this.logger.log("Teams webhook accepted the adaptive card payload.");
+      this.logger.log("Code sent to Teams successfully using adaptive card payload.");
     } catch {
       // Fallback for classic incoming webhook endpoints.
-      this.logger.warn("Adaptive card payload failed, trying classic text payload fallback.");
+      this.logger.warn("Adaptive card payload failed, using plain text fallback.");
       await axios.post(
         webhookUrl,
         {
@@ -66,7 +73,7 @@ export class TeamsWebhookNotifierService implements TeamsNotifierPort {
           timeout: 7000,
         },
       );
-      this.logger.log("Teams webhook accepted the classic text payload fallback.");
+      this.logger.log("Code sent to Teams successfully using plain text fallback.");
     }
   }
 

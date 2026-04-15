@@ -29,9 +29,7 @@ export class MailPollingService implements OnModuleInit, OnModuleDestroy {
       await this.executeCycle();
     }, this.appConfigService.pollingIntervalSeconds * 1000);
 
-    this.logger.log(
-      `Polling started every ${this.appConfigService.pollingIntervalSeconds} seconds.`,
-    );
+    this.logger.log(`Polling started every ${this.appConfigService.pollingIntervalSeconds} seconds.`);
   }
 
   async onModuleDestroy(): Promise<void> {
@@ -42,7 +40,7 @@ export class MailPollingService implements OnModuleInit, OnModuleDestroy {
 
   private async executeCycle(): Promise<void> {
     if (this.running) {
-      this.logger.warn("Skipping cycle because previous cycle is still running.");
+      this.logger.warn("Skipping cycle because the previous cycle is still running.");
       this.metricsService.recordCounter("polling.skipped");
       return;
     }
@@ -61,7 +59,7 @@ export class MailPollingService implements OnModuleInit, OnModuleDestroy {
       await this.otpProcessingService.processUnreadMessages();
       const durationMs = Date.now() - startedAt;
       this.logger.log(`Polling cycle finished in ${durationMs} ms.`);
-      
+
       this.metricsService.recordHistogram("polling.duration_ms", durationMs);
       this.metricsService.recordCounter("polling.completed");
       this.healthCheckService.recordCycleCheck("ok", durationMs);
@@ -69,7 +67,7 @@ export class MailPollingService implements OnModuleInit, OnModuleDestroy {
       const durationMs = Date.now() - startedAt;
       const errorMessage = error instanceof Error ? error.message : String(error);
       this.logger.error(`Polling cycle failed after ${durationMs}ms: ${errorMessage}`);
-      
+
       this.metricsService.recordCounter("polling.failed");
       this.metricsService.recordHistogram("polling.duration_ms", durationMs);
       this.healthCheckService.recordCycleCheck("error", durationMs);

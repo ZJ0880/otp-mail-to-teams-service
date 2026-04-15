@@ -46,7 +46,7 @@ export class ImapMailReaderService implements MailReaderPort, OnModuleDestroy {
           const parsed = await simpleParser(message.source);
           const bodyText = parsed.text ?? "";
           const fromHeader = parsed.from?.text ?? message.envelope?.from?.[0]?.address ?? "unknown";
-          const subject = parsed.subject ?? message.envelope?.subject ?? "(sin asunto)";
+          const subject = parsed.subject ?? message.envelope?.subject ?? "(no subject)";
           const rawReceivedAt = parsed.date ?? message.internalDate ?? new Date();
           const receivedAt = rawReceivedAt instanceof Date ? rawReceivedAt : new Date(rawReceivedAt);
 
