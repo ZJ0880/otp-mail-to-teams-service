@@ -10,7 +10,8 @@ export class TeamsWebhookNotifierService implements TeamsNotifierPort {
   constructor(private readonly appConfigService: AppConfigService) {}
 
   async send(payload: TeamsNotificationPayload): Promise<void> {
-    const receivedAt = payload.receivedAt.toISOString().replace("T", " ").replace(".000Z", " UTC");
+    const webhookUrl = this.ensureHttpsUrl(this.appConfigService.teamsWebhookUrl);
+    const receivedAt = this.formatReceivedAt(payload.receivedAt);
 
     const messageText = this.normalizeTemplate(this.appConfigService.teamsMessageTemplate)
       .replaceAll("{otp}", payload.otp)
@@ -25,7 +26,7 @@ export class TeamsWebhookNotifierService implements TeamsNotifierPort {
           contentType: "application/vnd.microsoft.card.adaptive",
           contentUrl: null,
           content: {
-            $schema: "http://adaptivecards.io/schemas/adaptive-card.json",
+            $schema: "https://adaptivecards.io/schemas/adaptive-card.json",
             type: "AdaptiveCard",
             version: "1.4",
             body: [
@@ -49,7 +50,7 @@ export class TeamsWebhookNotifierService implements TeamsNotifierPort {
 
     try {
       this.logger.log("Sending OTP notification to Teams webhook.");
-      await axios.post(this.appConfigService.teamsWebhookUrl, workflowPayload, {
+      await axios.post(webhookUrl, workflowPayload, {
         timeout: 7000,
       });
       this.logger.log("Teams webhook accepted the adaptive card payload.");
@@ -57,7 +58,7 @@ export class TeamsWebhookNotifierService implements TeamsNotifierPort {
       // Fallback for classic incoming webhook endpoints.
       this.logger.warn("Adaptive card payload failed, trying classic text payload fallback.");
       await axios.post(
-        this.appConfigService.teamsWebhookUrl,
+        webhookUrl,
         {
           text: messageText,
         },
@@ -71,5 +72,27 @@ export class TeamsWebhookNotifierService implements TeamsNotifierPort {
 
   private normalizeTemplate(template: string): string {
     return template.replaceAll("\\\\n", "\n").replaceAll("\\\\t", "\t");
+  }
+
+  private formatReceivedAt(date: Date): string {
+    const day = String(date.getDate()).padStart(2, "0");
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const year = String(date.getFullYear()).slice(-2);
+
+    let hours = date.getHours();
+    const minutes = String(date.getMinutes()).padStart(2, "0");
+    const period = hours >= 12 ? "PM" : "AM";
+
+    hours %= 12;
+    if (hours === 0) {
+      hours = 12;
+    }
+
+    const hourText = String(hours).padStart(2, "0");
+    return `${day}/${month}/${year} ${hourText}:${minutes} ${period}`;
+  }
+
+  private ensureHttpsUrl(url: string): string {
+    return url.startsWith("http://") ? `https://${url.slice(7)}` : url;
   }
 }
