@@ -7,6 +7,18 @@ import { OtpValidatorService } from "../otp/application/otp-validator.service";
 import { TEAMS_NOTIFIER_PORT, TeamsNotifierPort } from "../teams/domain/teams-notifier.port";
 import { MetricsService } from "../observability/metrics.service";
 
+type ProcessingOutcome = "sent" | "filtered" | "not_found" | "expired" | "error";
+
+export interface OtpProcessingResult {
+  unreadCount: number;
+  processedCount: number;
+  sentCount: number;
+  filteredCount: number;
+  notFoundCount: number;
+  expiredCount: number;
+  errorCount: number;
+}
+
 @Injectable()
 export class OtpProcessingService {
   private readonly logger = new Logger(OtpProcessingService.name);
@@ -20,28 +32,58 @@ export class OtpProcessingService {
     private readonly metricsService: MetricsService,
   ) {}
 
-  async processUnreadMessages(): Promise<void> {
+  async processUnreadMessages(): Promise<OtpProcessingResult> {
     this.logger.log("Starting unread message processing.");
     const messages = await this.mailReader.fetchUnreadMessages();
     this.logger.log(`Unread messages fetched: ${messages.length}`);
     this.metricsService.recordGauge("messages.unread_count", messages.length);
 
+    const result: OtpProcessingResult = {
+      unreadCount: messages.length,
+      processedCount: 0,
+      sentCount: 0,
+      filteredCount: 0,
+      notFoundCount: 0,
+      expiredCount: 0,
+      errorCount: 0,
+    };
+
     if (messages.length === 0) {
       this.logger.log("No new messages found.");
-      return;
+      return result;
     }
 
     for (const message of messages) {
       this.logger.log(
         `Evaluating message traceId=${message.messageId ?? message.uid} subject=${message.subject}`,
       );
-      await this.processSingleMessage(message);
+      const outcome = await this.processSingleMessage(message);
+      result.processedCount += 1;
+
+      switch (outcome) {
+        case "sent":
+          result.sentCount += 1;
+          break;
+        case "filtered":
+          result.filteredCount += 1;
+          break;
+        case "not_found":
+          result.notFoundCount += 1;
+          break;
+        case "expired":
+          result.expiredCount += 1;
+          break;
+        case "error":
+          result.errorCount += 1;
+          break;
+      }
     }
 
     this.logger.log("Unread message processing completed.");
+    return result;
   }
 
-  private async processSingleMessage(message: MailMessage): Promise<void> {
+  private async processSingleMessage(message: MailMessage): Promise<ProcessingOutcome> {
     const traceId = message.messageId ?? `uid:${message.uid}`;
 
     try {
@@ -50,7 +92,7 @@ export class OtpProcessingService {
         await this.mailReader.acknowledgeMessage(message.uid);
         this.logger.log(`[${traceId}] Message marked as read after filter.`);
         this.metricsService.recordCounter("otp.filtered");
-        return;
+        return "filtered";
       }
 
       const extracted = this.otpExtractorService.extract(message.subject, message.bodyText);
@@ -59,7 +101,7 @@ export class OtpProcessingService {
         await this.mailReader.acknowledgeMessage(message.uid);
         this.logger.log(`[${traceId}] Message marked as read after no OTP match.`);
         this.metricsService.recordCounter("otp.not_found");
-        return;
+        return "not_found";
       }
 
       this.logger.log(
@@ -71,13 +113,13 @@ export class OtpProcessingService {
         await this.mailReader.acknowledgeMessage(message.uid);
         this.logger.log(`[${traceId}] Message marked as read after expiry check.`);
         this.metricsService.recordCounter("otp.expired");
-        return;
+        return "expired";
       }
 
       this.logger.log(`[${traceId}] OTP is valid and ready to send.`);
 
       this.logger.log(
-        `[${traceId}] Sending code to Teams. code=${extracted.code} source=${extracted.extractedFrom}`,
+        `[${traceId}] Sending code to Teams. source=${extracted.extractedFrom}`,
       );
 
       await this.teamsNotifier.send({
@@ -90,7 +132,6 @@ export class OtpProcessingService {
       this.logger.log(
         `[${traceId}] Code sent to Teams successfully. subject=${message.subject} receivedAt=${message.receivedAt.toISOString()}`,
       );
-      this.logger.log(`[${traceId}] [SENT][OTP] ${extracted.code}`);
       await this.mailReader.acknowledgeMessage(message.uid);
       this.logger.log(`[${traceId}] Message marked as read after successful delivery.`);
 
@@ -98,10 +139,12 @@ export class OtpProcessingService {
         `[${traceId}] Code published. source=${extracted.extractedFrom} pattern=${extracted.matchedPattern}`,
       );
       this.metricsService.recordCounter("otp.sent");
+      return "sent";
     } catch (error) {
       const messageError = error instanceof Error ? error.message : String(error);
       this.logger.error(`[${traceId}] Processing failed: ${messageError}`);
       this.metricsService.recordCounter("otp.error");
+      return "error";
     }
   }
 

@@ -20,6 +20,11 @@ export class MailPollingService implements OnModuleInit, OnModuleDestroy {
   ) {}
 
   async onModuleInit(): Promise<void> {
+    if (!this.appConfigService.enablePolling) {
+      this.logger.log("Polling disabled by APP_ENABLE_POLLING=false.");
+      return;
+    }
+
     this.logger.log(
       `Initializing polling worker with interval ${this.appConfigService.pollingIntervalSeconds} seconds.`,
     );

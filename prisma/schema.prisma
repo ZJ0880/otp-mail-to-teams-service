@@ -1,0 +1,177 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  ADMIN
+  OPERATOR
+  VIEWER
+}
+
+enum TicketStatus {
+  PENDING
+  PROCESSING
+  SUCCESS
+  FAILED
+  RETRYING
+  CANCELLED
+}
+
+enum AttemptResult {
+  SUCCESS
+  FAILED
+  NO_MATCH
+  EXPIRED
+  FILTERED
+}
+
+enum NotificationType {
+  TICKET_CREATED
+  TICKET_STATUS_CHANGED
+  TICKET_RETRY_SCHEDULED
+  CONFIG_UPDATED
+  RATE_LIMIT_BLOCKED
+  SYSTEM_ALERT
+}
+
+model User {
+  id             String            @id @default(cuid())
+  email          String            @unique
+  name           String
+  role           UserRole          @default(OPERATOR)
+  isActive       Boolean           @default(true)
+  passwordHash   String?
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+  credentialProfiles CredentialProfile[]
+  ticketRequests TicketRequest[]
+  auditLogs      AuditLog[]
+  rateLimitEvents RateLimitEvent[]
+  notificationEvents NotificationEvent[]
+}
+
+model CredentialProfile {
+  id                      String         @id @default(cuid())
+  ownerUserId             String
+  profileName             String
+  mailHost                String
+  mailPort                Int
+  mailSecure              Boolean
+  mailUser                String
+  mailMailbox             String
+  mailPasswordEncrypted   String
+  teamsWebhookEncrypted   String
+  teamsMessageTemplate    String
+  allowedFromCsv          String?
+  subjectKeywordsCsv      String?
+  otpRegexPatterns        String
+  otpTtlMinutes           Int
+  isDefault               Boolean        @default(false)
+  createdAt               DateTime       @default(now())
+  updatedAt               DateTime       @updatedAt
+  owner                   User           @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  ticketRequests          TicketRequest[]
+
+  @@index([ownerUserId])
+  @@unique([ownerUserId, profileName])
+  @@unique([id, ownerUserId])
+}
+
+model TicketRequest {
+  id               String         @id @default(cuid())
+  requestedByUserId String
+  profileId        String
+  status           TicketStatus   @default(PENDING)
+  requestReason    String?
+  requestedAt      DateTime       @default(now())
+  startedAt        DateTime?
+  finishedAt       DateTime?
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+  requestedBy      User           @relation(fields: [requestedByUserId], references: [id], onDelete: Restrict)
+  profile          CredentialProfile @relation(fields: [profileId], references: [id], onDelete: Restrict)
+  attempts         TicketAttempt[]
+  otpResults       OtpResult[]
+
+  @@index([requestedByUserId])
+  @@index([profileId])
+  @@index([status, requestedAt])
+}
+
+model TicketAttempt {
+  id            String        @id @default(cuid())
+  ticketRequestId String
+  attemptNumber Int
+  result        AttemptResult
+  errorCode     String?
+  errorMessage  String?
+  durationMs    Int?
+  executedAt    DateTime      @default(now())
+  createdAt     DateTime      @default(now())
+  ticketRequest TicketRequest @relation(fields: [ticketRequestId], references: [id], onDelete: Cascade)
+
+  @@unique([ticketRequestId, attemptNumber])
+  @@index([ticketRequestId, executedAt])
+}
+
+model OtpResult {
+  id                 String       @id @default(cuid())
+  ticketRequestId    String
+  otpMasked          String
+  source             String
+  receivedAt         DateTime
+  deliveredToTeams   Boolean      @default(false)
+  deliveredAt        DateTime?
+  createdAt          DateTime     @default(now())
+  ticketRequest      TicketRequest @relation(fields: [ticketRequestId], references: [id], onDelete: Cascade)
+
+  @@index([ticketRequestId])
+}
+
+model AuditLog {
+  id          String    @id @default(cuid())
+  actorUserId String
+  action      String
+  entityType  String
+  entityId    String
+  beforeJson  Json?
+  afterJson   Json?
+  ip          String?
+  userAgent   String?
+  createdAt   DateTime  @default(now())
+  actor       User      @relation(fields: [actorUserId], references: [id], onDelete: Restrict)
+
+  @@index([actorUserId, createdAt])
+  @@index([entityType, entityId])
+}
+
+model RateLimitEvent {
+  id         String   @id @default(cuid())
+  userId     String
+  endpoint   String
+  blocked    Boolean
+  windowKey  String
+  createdAt  DateTime @default(now())
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, endpoint, createdAt])
+}
+
+model NotificationEvent {
+  id          String            @id @default(cuid())
+  userId      String
+  eventType   NotificationType
+  payloadJson Json
+  delivered   Boolean           @default(false)
+  deliveredAt DateTime?
+  createdAt   DateTime          @default(now())
+  user        User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@index([eventType, createdAt])
+}

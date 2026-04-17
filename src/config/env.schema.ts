@@ -12,6 +12,50 @@ import {
 } from "class-validator";
 
 class EnvironmentVariables {
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  @Max(65535)
+  APP_PORT?: number;
+
+  @IsOptional()
+  @IsBooleanString()
+  APP_ENABLE_POLLING?: string;
+
+  @IsOptional()
+  @IsString()
+  APP_ADMIN_USER?: string;
+
+  @IsString()
+  @IsNotEmpty()
+  APP_ADMIN_PASSWORD!: string;
+
+  @IsString()
+  @IsNotEmpty()
+  APP_JWT_SECRET!: string;
+
+  @IsOptional()
+  @IsInt()
+  @Min(5)
+  @Max(1440)
+  AUTH_TOKEN_TTL_MINUTES?: number;
+
+  @IsOptional()
+  @IsString()
+  APP_CORS_ORIGINS?: string;
+
+  @IsString()
+  @IsNotEmpty()
+  DATABASE_URL!: string;
+
+  @IsString()
+  @IsNotEmpty()
+  REDIS_URL!: string;
+
+  @IsString()
+  @IsNotEmpty()
+  SECRETS_ENCRYPTION_KEY!: string;
+
   @IsString()
   @IsNotEmpty()
   MAIL_HOST!: string;

@@ -54,6 +54,56 @@ export class AppConfigService {
     return Number(this.mustGet("APP_POLLING_INTERVAL_SECONDS"));
   }
 
+  get enablePolling(): boolean {
+    return this.configService.get<string>("APP_ENABLE_POLLING") === "true";
+  }
+
+  get appPort(): number {
+    const value = this.configService.get<string>("APP_PORT");
+    return value ? Number(value) : 3000;
+  }
+
+  get adminUser(): string {
+    return this.configService.get<string>("APP_ADMIN_USER") ?? "admin";
+  }
+
+  get adminPassword(): string {
+    return this.mustGet("APP_ADMIN_PASSWORD");
+  }
+
+  get jwtSecret(): string {
+    return this.mustGet("APP_JWT_SECRET");
+  }
+
+  get authTokenTtlMinutes(): number {
+    const value = this.configService.get<string>("AUTH_TOKEN_TTL_MINUTES");
+    return value ? Number(value) : 60;
+  }
+
+  get corsOrigins(): string[] {
+    const value = this.configService.get<string>("APP_CORS_ORIGINS");
+    if (!value) {
+      return ["http://localhost:4200"];
+    }
+
+    return value
+      .split(",")
+      .map((item) => item.trim())
+      .filter((item) => item.length > 0);
+  }
+
+  get databaseUrl(): string {
+    return this.mustGet("DATABASE_URL");
+  }
+
+  get redisUrl(): string {
+    return this.mustGet("REDIS_URL");
+  }
+
+  get secretsEncryptionKey(): string {
+    return this.mustGet("SECRETS_ENCRYPTION_KEY");
+  }
+
   get teamsWebhookUrl(): string {
     return this.mustGet("TEAMS_WEBHOOK_URL");
   }

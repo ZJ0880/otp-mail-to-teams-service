@@ -14,7 +14,7 @@ export class TeamsWebhookNotifierService implements TeamsNotifierPort {
     const receivedAt = this.formatReceivedAt(payload.receivedAt);
 
     this.logger.log(
-      `Preparing Teams notification. sender=${payload.from.trim()} subject=${payload.subject.trim()} receivedAt=${receivedAt} code=${payload.otp}`,
+      `Preparing Teams notification. sender=${payload.from.trim()} subject=${payload.subject.trim()} receivedAt=${receivedAt}`,
     );
 
     const messageText = this.normalizeTemplate(this.appConfigService.teamsMessageTemplate)
@@ -63,7 +63,6 @@ export class TeamsWebhookNotifierService implements TeamsNotifierPort {
         timeout: 7000,
       });
       this.logger.log("Code sent to Teams successfully using adaptive card payload.");
-      this.logger.log(`[SENT][OTP] ${payload.otp}`);
     } catch {
       this.logger.warn("Adaptive card payload failed, using plain text fallback.");
       await axios.post(
@@ -76,7 +75,6 @@ export class TeamsWebhookNotifierService implements TeamsNotifierPort {
         },
       );
       this.logger.log("Code sent to Teams successfully using plain text fallback.");
-      this.logger.log(`[SENT][OTP] ${payload.otp}`);
     }
   }
 
