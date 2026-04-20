@@ -16,7 +16,7 @@ export class ManualOtpProcessingService {
     const mailPort = input.mailPort ?? 993;
     const mailSecure = input.mailSecure ?? true;
     const mailMailbox = input.mailMailbox || 'INBOX';
-    const otpRegexPatterns = input.otpRegexPatterns || '(\\d{6})';
+    const otpRegexPatterns = input.otpRegexPatterns || String.raw`(\d{6})`;
     const otpTtlMinutes = input.otpTtlMinutes ?? 5;
     const teamsMessageTemplate = input.teamsMessageTemplate || 'Codigo OTP: {otp} | Remitente: {from} | Asunto: {subject}';
 

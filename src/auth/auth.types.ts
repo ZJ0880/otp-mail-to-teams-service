@@ -1,13 +1,38 @@
-export interface LoginDto {
-  username: string;
-  password: string;
+import { Transform } from "class-transformer";
+import { IsEmail, IsIn, IsNotEmpty, IsString, MinLength } from "class-validator";
+import { ApiProperty } from "@nestjs/swagger";
+
+export class LoginDto {
+  @ApiProperty({ example: "admin@otp.local" })
+  @IsString()
+  @IsNotEmpty()
+  username!: string;
+
+  @ApiProperty({ example: "change-me-now" })
+  @IsString()
+  @IsNotEmpty()
+  password!: string;
 }
 
-export interface RegisterUserDto {
-  email: string;
-  name: string;
-  password: string;
-  role: UserRole;
+export class RegisterUserDto {
+  @ApiProperty({ example: "operator@otp.local" })
+  @Transform(({ value }) => String(value ?? "").trim().toLowerCase())
+  @IsEmail()
+  email!: string;
+
+  @ApiProperty({ example: "Operator OTP" })
+  @IsString()
+  @IsNotEmpty()
+  name!: string;
+
+  @ApiProperty({ example: "change-me-now" })
+  @IsString()
+  @MinLength(6)
+  password!: string;
+
+  @ApiProperty({ example: "OPERATOR", enum: ["ADMIN", "OPERATOR", "VIEWER"] })
+  @IsIn(["ADMIN", "OPERATOR", "VIEWER"])
+  role!: UserRole;
 }
 
 export interface UserSummary {

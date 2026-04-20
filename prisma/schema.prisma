@@ -86,6 +86,8 @@ model TicketRequest {
   id               String         @id @default(cuid())
   requestedByUserId String
   profileId        String
+  requesterName    String         @default("")
+  requesterEmail   String         @default("")
   status           TicketStatus   @default(PENDING)
   requestReason    String?
   requestedAt      DateTime       @default(now())
@@ -101,6 +103,8 @@ model TicketRequest {
   @@index([requestedByUserId])
   @@index([profileId])
   @@index([status, requestedAt])
+  @@index([requesterEmail, requestedAt])
+  @@index([requesterName, requestedAt])
 }
 
 model TicketAttempt {

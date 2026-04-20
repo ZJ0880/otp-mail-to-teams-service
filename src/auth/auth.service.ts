@@ -1,4 +1,4 @@
-import { Injectable, UnauthorizedException } from "@nestjs/common";
+import { BadRequestException, Injectable, UnauthorizedException } from "@nestjs/common";
 import * as jwt from "jsonwebtoken";
 import { AppConfigService } from "../config/app-config.service";
 import { PrismaService } from "../database/prisma.service";
@@ -21,6 +21,10 @@ export class AuthService {
   ) {}
 
   async login(input: LoginDto): Promise<AuthTokenPayload> {
+    if (!input?.username || !input?.password) {
+      throw new BadRequestException("username and password are required");
+    }
+
     const user = await this.prismaService.user.findFirst({
       where: {
         isActive: true,
@@ -29,7 +33,7 @@ export class AuthService {
       orderBy: { createdAt: "asc" },
     });
 
-    if (!user || !user.passwordHash) {
+    if (!user?.passwordHash) {
       throw new UnauthorizedException("Invalid credentials");
     }
 
@@ -58,6 +62,10 @@ export class AuthService {
   }
 
   async registerUser(requester: AuthenticatedUser, input: RegisterUserDto): Promise<UserSummary> {
+    if (!input?.email || !input?.name || !input?.password || !input?.role) {
+      throw new BadRequestException("email, name, password and role are required");
+    }
+
     this.ensureAdmin(requester.role);
 
     const existing = await this.prismaService.user.findUnique({
@@ -72,7 +80,7 @@ export class AuthService {
       data: {
         email: input.email.trim().toLowerCase(),
         name: input.name.trim(),
-        role: input.role as UserRole,
+        role: input.role,
         isActive: true,
         passwordHash: hashPassword(input.password),
       },

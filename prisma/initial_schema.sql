@@ -56,6 +56,8 @@ CREATE TABLE "public"."TicketRequest" (
     "id" TEXT NOT NULL,
     "requestedByUserId" TEXT NOT NULL,
     "profileId" TEXT NOT NULL,
+    "requesterName" TEXT NOT NULL DEFAULT '',
+    "requesterEmail" TEXT NOT NULL DEFAULT '',
     "status" "public"."TicketStatus" NOT NULL DEFAULT 'PENDING',
     "requestReason" TEXT,
     "requestedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -157,6 +159,12 @@ CREATE INDEX "TicketRequest_profileId_idx" ON "public"."TicketRequest"("profileI
 
 -- CreateIndex
 CREATE INDEX "TicketRequest_status_requestedAt_idx" ON "public"."TicketRequest"("status", "requestedAt");
+
+-- CreateIndex
+CREATE INDEX "TicketRequest_requesterEmail_requestedAt_idx" ON "public"."TicketRequest"("requesterEmail", "requestedAt");
+
+-- CreateIndex
+CREATE INDEX "TicketRequest_requesterName_requestedAt_idx" ON "public"."TicketRequest"("requesterName", "requestedAt");
 
 -- CreateIndex
 CREATE INDEX "TicketAttempt_ticketRequestId_executedAt_idx" ON "public"."TicketAttempt"("ticketRequestId", "executedAt");
