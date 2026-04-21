@@ -1,7 +1,7 @@
 import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
-import { AttemptResult, Prisma, TicketStatus } from "@prisma/client";
-import { SecretEncryptionService } from "../security/secret-encryption.service";
+import { Prisma, TicketStatus } from "@prisma/client";
 import { PrismaService } from "../database/prisma.service";
+import { RequestApprovalNotifierService } from "./request-approval-notifier.service";
 import {
   CreateTicketRequestDto,
   ListTicketRequestsQueryDto,
@@ -11,8 +11,6 @@ import {
   TicketRequestListResponse,
   TicketRequestResponseItem,
 } from "./ticket-requests.dto";
-import { ManualOtpProcessingService } from "./manual-otp-processing.service";
-import { OtpProcessingResult } from "./otp-processing.service";
 
 interface AuthenticatedRequestUser {
   userId: string;
@@ -23,6 +21,8 @@ interface AuthenticatedRequestUser {
 interface EncodedRequestMeta {
   requesterName: string;
   requesterEmail: string;
+  platform: string;
+  course: string;
   reason?: string;
 }
 
@@ -48,8 +48,7 @@ const REQUEST_META_PREFIX = "REQ_META::";
 export class TicketRequestsService {
   constructor(
     private readonly prismaService: PrismaService,
-    private readonly secretEncryptionService: SecretEncryptionService,
-    private readonly manualOtpProcessingService: ManualOtpProcessingService,
+    private readonly requestApprovalNotifierService: RequestApprovalNotifierService,
   ) {}
 
   async createRequest(
@@ -72,17 +71,19 @@ export class TicketRequestsService {
     const metadata = this.encodeRequestMeta({
       requesterName: cleanName,
       requesterEmail: input.requesterEmail,
+      platform: input.platform?.trim() || "unknown",
+      course: input.course?.trim() || "unknown",
       reason: input.reason?.trim() || undefined,
     });
 
-    const processNow = input.processNow ?? true;
+    const processNow = input.processNow ?? false;
 
     const created = await this.prismaService.ticketRequest.create({
       data: {
         requestedByUserId: user.userId,
         profileId: profile.id,
-        status: processNow ? TicketStatus.PROCESSING : TicketStatus.PENDING,
-        startedAt: processNow ? new Date() : null,
+        status: TicketStatus.PENDING,
+        startedAt: null,
         requestReason: metadata,
       },
       include: {
@@ -99,110 +100,18 @@ export class TicketRequestsService {
         afterJson: {
           requesterName: cleanName,
           requesterEmail: input.requesterEmail,
-          processNow,
+          platform: input.platform?.trim() || "unknown",
+          course: input.course?.trim() || "unknown",
+          processNowRequested: processNow,
+          executionMode: "approval_only",
         },
       },
     });
 
-    if (!processNow) {
-      return this.toResponseItem(created, this.decodeRequestMeta(created.requestReason));
-    }
+    const responseItem = this.toResponseItem(created, this.decodeRequestMeta(created.requestReason));
+    await this.requestApprovalNotifierService.notifyRequestCreated(responseItem);
 
-    try {
-      const processingSummary = await this.manualOtpProcessingService.processUnreadMessages({
-        mailHost: profile.mailHost,
-        mailPort: profile.mailPort,
-        mailSecure: profile.mailSecure,
-        mailUser: profile.mailUser,
-        mailMailbox: profile.mailMailbox,
-        mailPassword: this.secretEncryptionService.decrypt(profile.mailPasswordEncrypted),
-        teamsWebhookUrl: this.secretEncryptionService.decrypt(profile.teamsWebhookEncrypted),
-        teamsMessageTemplate: profile.teamsMessageTemplate,
-        allowedFromCsv: profile.allowedFromCsv ?? undefined,
-        subjectKeywordsCsv: profile.subjectKeywordsCsv ?? undefined,
-        otpRegexPatterns: profile.otpRegexPatterns,
-        otpTtlMinutes: profile.otpTtlMinutes,
-      });
-
-      const finalStatus = this.resolveFinalStatus(processingSummary);
-
-      const updated = await this.prismaService.ticketRequest.update({
-        where: { id: created.id },
-        data: {
-          status: finalStatus,
-          finishedAt: new Date(),
-        },
-        include: {
-          requestedBy: true,
-        },
-      });
-
-      await this.prismaService.ticketAttempt.create({
-        data: {
-          ticketRequestId: created.id,
-          attemptNumber: 1,
-          result: this.resolveAttemptResult(processingSummary),
-          errorMessage:
-            processingSummary.errorCount > 0
-              ? "Processing finished with errors. Check logs and filters."
-              : null,
-          durationMs: null,
-        },
-      });
-
-      await this.prismaService.auditLog.create({
-        data: {
-          actorUserId: user.userId,
-          action: "TICKET_REQUEST_PROCESSED",
-          entityType: "TicketRequest",
-          entityId: created.id,
-          afterJson: processingSummary as unknown as Prisma.InputJsonValue,
-        },
-      });
-
-      return this.toResponseItem(
-        updated,
-        this.decodeRequestMeta(updated.requestReason),
-        processingSummary,
-      );
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-
-      const failed = await this.prismaService.ticketRequest.update({
-        where: { id: created.id },
-        data: {
-          status: TicketStatus.FAILED,
-          finishedAt: new Date(),
-        },
-        include: {
-          requestedBy: true,
-        },
-      });
-
-      await this.prismaService.ticketAttempt.create({
-        data: {
-          ticketRequestId: created.id,
-          attemptNumber: 1,
-          result: AttemptResult.FAILED,
-          errorMessage: message,
-          durationMs: null,
-        },
-      });
-
-      await this.prismaService.auditLog.create({
-        data: {
-          actorUserId: user.userId,
-          action: "TICKET_REQUEST_FAILED",
-          entityType: "TicketRequest",
-          entityId: created.id,
-          afterJson: {
-            error: message,
-          },
-        },
-      });
-
-      return this.toResponseItem(failed, this.decodeRequestMeta(failed.requestReason));
-    }
+    return responseItem;
   }
 
   async listRequests(
@@ -447,38 +356,6 @@ export class TicketRequestsService {
     }
   }
 
-  private resolveFinalStatus(processingSummary: OtpProcessingResult): TicketStatus {
-    if (processingSummary.sentCount > 0) {
-      return TicketStatus.SUCCESS;
-    }
-
-    if (processingSummary.errorCount > 0) {
-      return TicketStatus.FAILED;
-    }
-
-    return TicketStatus.FAILED;
-  }
-
-  private resolveAttemptResult(processingSummary: OtpProcessingResult): AttemptResult {
-    if (processingSummary.sentCount > 0) {
-      return AttemptResult.SUCCESS;
-    }
-
-    if (processingSummary.expiredCount > 0) {
-      return AttemptResult.EXPIRED;
-    }
-
-    if (processingSummary.filteredCount > 0) {
-      return AttemptResult.FILTERED;
-    }
-
-    if (processingSummary.notFoundCount > 0) {
-      return AttemptResult.NO_MATCH;
-    }
-
-    return AttemptResult.FAILED;
-  }
-
   private encodeRequestMeta(meta: EncodedRequestMeta): string {
     return `${REQUEST_META_PREFIX}${JSON.stringify(meta)}`;
   }
@@ -488,6 +365,8 @@ export class TicketRequestsService {
       return {
         requesterName: "unknown",
         requesterEmail: "unknown@example.com",
+        platform: "unknown",
+        course: "unknown",
       };
     }
 
@@ -496,12 +375,16 @@ export class TicketRequestsService {
       return {
         requesterName: parsed?.requesterName || "unknown",
         requesterEmail: parsed?.requesterEmail || "unknown@example.com",
+        platform: parsed?.platform || "unknown",
+        course: parsed?.course || "unknown",
         reason: parsed?.reason,
       };
     } catch {
       return {
         requesterName: "unknown",
         requesterEmail: "unknown@example.com",
+        platform: "unknown",
+        course: "unknown",
       };
     }
   }
@@ -517,29 +400,20 @@ export class TicketRequestsService {
       requestReason: string | null;
     },
     metadata: EncodedRequestMeta,
-    processingSummary?: OtpProcessingResult,
   ): TicketRequestResponseItem {
     return {
       id: row.id,
       requesterName: metadata.requesterName,
       requesterEmail: metadata.requesterEmail,
+      platform: metadata.platform,
+      course: metadata.course,
       requestedAt: row.requestedAt.toISOString(),
       startedAt: row.startedAt?.toISOString() ?? undefined,
       resolvedAt: row.finishedAt?.toISOString() ?? undefined,
       status: this.fromTicketStatus(row.status),
       requestedBy: row.requestedBy.name,
       note: metadata.reason,
-      processingSummary: processingSummary
-        ? {
-            unreadCount: processingSummary.unreadCount,
-            processedCount: processingSummary.processedCount,
-            sentCount: processingSummary.sentCount,
-            filteredCount: processingSummary.filteredCount,
-            notFoundCount: processingSummary.notFoundCount,
-            expiredCount: processingSummary.expiredCount,
-            errorCount: processingSummary.errorCount,
-          }
-        : undefined,
+      processingSummary: undefined,
     };
   }
 }

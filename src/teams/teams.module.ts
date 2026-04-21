@@ -10,6 +10,6 @@ import { TEAMS_NOTIFIER_PORT } from "./domain/teams-notifier.port";
       useExisting: TeamsWebhookNotifierService,
     },
   ],
-  exports: [TEAMS_NOTIFIER_PORT],
+  exports: [TEAMS_NOTIFIER_PORT, TeamsWebhookNotifierService],
 })
 export class TeamsModule {}

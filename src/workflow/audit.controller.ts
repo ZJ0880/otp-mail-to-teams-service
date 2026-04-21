@@ -1,4 +1,5 @@
 import { BadRequestException, Controller, Get, Query, UseGuards } from "@nestjs/common";
+import { ApiBearerAuth } from "@nestjs/swagger";
 import { Prisma } from "@prisma/client";
 import { Roles } from "../auth/roles.decorator";
 import { RolesGuard } from "../auth/roles.guard";
@@ -8,6 +9,7 @@ import { AuditEventsListResponse, AuditEventsQueryDto, AuditEventResponse } from
 
 @Controller("audit")
 @UseGuards(TokenAuthGuard, RolesGuard)
+@ApiBearerAuth("bearer")
 export class AuditController {
   constructor(private readonly prismaService: PrismaService) {}
 

@@ -1,4 +1,5 @@
 import { Transform } from "class-transformer";
+import { ApiPropertyOptional } from "@nestjs/swagger";
 import {
   IsBoolean,
   IsEmail,
@@ -22,6 +23,18 @@ export class CreateTicketRequestDto {
   @Transform(({ value }) => String(value ?? "").trim().toLowerCase())
   @IsEmail()
   requesterEmail!: string;
+
+  @ApiPropertyOptional({ example: "Udemy" })
+  @IsOptional()
+  @IsString()
+  @IsNotEmpty()
+  platform?: string;
+
+  @ApiPropertyOptional({ example: "Bases de Datos en Mongo" })
+  @IsOptional()
+  @IsString()
+  @IsNotEmpty()
+  course?: string;
 
   @IsOptional()
   @IsString()
@@ -72,6 +85,8 @@ export interface TicketRequestResponseItem {
   id: string;
   requesterName: string;
   requesterEmail: string;
+  platform: string;
+  course: string;
   requestedAt: string;
   startedAt?: string;
   resolvedAt?: string;

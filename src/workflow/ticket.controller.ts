@@ -1,4 +1,5 @@
 import { Body, Controller, Get, Param, Post, Query, Req, UseGuards } from "@nestjs/common";
+import { ApiBearerAuth } from "@nestjs/swagger";
 import { TokenAuthGuard } from "../auth/token-auth.guard";
 import { Roles } from "../auth/roles.decorator";
 import { RolesGuard } from "../auth/roles.guard";
@@ -24,6 +25,7 @@ interface RequestWithUser {
 
 @Controller("tickets")
 @UseGuards(TokenAuthGuard, RolesGuard)
+@ApiBearerAuth("bearer")
 export class TicketController {
   constructor(
     private readonly otpProcessingService: OtpProcessingService,

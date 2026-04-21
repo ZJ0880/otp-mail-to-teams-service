@@ -2,6 +2,7 @@ import { Injectable, Logger } from "@nestjs/common";
 import axios from "axios";
 import { AppConfigService } from "../../config/app-config.service";
 import { TeamsNotificationPayload, TeamsNotifierPort } from "../domain/teams-notifier.port";
+import { buildTeamsWorkflowPayload } from "./teams-card.builder";
 
 @Injectable()
 export class TeamsWebhookNotifierService implements TeamsNotifierPort {
@@ -24,7 +25,6 @@ export class TeamsWebhookNotifierService implements TeamsNotifierPort {
       .replaceAll("{receivedAt}", receivedAt);
 
     const cleanedMessageText = this.removeRedundantAlertTitle(messageText);
-
     const adaptiveCard = {
       $schema: "https://adaptivecards.io/schemas/adaptive-card.json",
       type: "AdaptiveCard",
@@ -45,17 +45,7 @@ export class TeamsWebhookNotifierService implements TeamsNotifierPort {
       ],
     };
 
-    const workflowPayload = {
-      type: "message",
-      body: adaptiveCard,
-      attachments: [
-        {
-          contentType: "application/vnd.microsoft.card.adaptive",
-          contentUrl: null,
-          content: adaptiveCard,
-        },
-      ],
-    };
+    const workflowPayload = buildTeamsWorkflowPayload(adaptiveCard, cleanedMessageText);
 
     try {
       this.logger.log("Sending code to Teams using adaptive card payload.");
@@ -75,6 +65,37 @@ export class TeamsWebhookNotifierService implements TeamsNotifierPort {
         },
       );
       this.logger.log("Code sent to Teams successfully using plain text fallback.");
+    }
+  }
+
+  async sendAdaptiveCard(
+    webhookUrl: string,
+    adaptiveCard: Record<string, unknown>,
+    fallbackText: string,
+  ): Promise<void> {
+    const safeWebhookUrl = this.ensureHttpsUrl(webhookUrl);
+    const workflowPayload = buildTeamsWorkflowPayload(adaptiveCard, fallbackText);
+
+    try {
+      this.logger.log("Sending approval adaptive card payload to Teams/Flow endpoint.");
+      const response = await axios.post(safeWebhookUrl, workflowPayload, {
+        timeout: 7000,
+      });
+      this.logger.log(`Approval card request accepted with status ${response.status}.`);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      this.logger.error(`Approval card adaptive payload failed: ${message}`);
+      this.logger.warn("Falling back to plain text approval notification.");
+
+      await axios.post(
+        safeWebhookUrl,
+        { text: fallbackText },
+        {
+          timeout: 7000,
+        },
+      );
+
+      this.logger.log("Approval notification sent using plain text fallback.");
     }
   }
 
@@ -128,4 +149,5 @@ export class TeamsWebhookNotifierService implements TeamsNotifierPort {
   private ensureHttpsUrl(url: string): string {
     return url.startsWith("http://") ? `https://${url.slice(7)}` : url;
   }
+
 }
