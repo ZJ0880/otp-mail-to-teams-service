@@ -24,6 +24,8 @@ async function bootstrap(): Promise<void> {
   const logger = new Logger("Bootstrap");
   const config = app.get(AppConfigService);
   const webhookHost = safeHost(config.teamsWebhookUrl);
+  const adminPanelHost = config.adminPanelBaseUrl ? safeHost(config.adminPanelBaseUrl) : "not-configured";
+  const mailHost = config.mailHost;
   const port = config.appPort;
 
   app.enableCors({
@@ -36,9 +38,9 @@ async function bootstrap(): Promise<void> {
 
   await app.listen(port);
 
-  logger.log("OTP mail-to-Teams API started.");
+  logger.log("Workflow API started.");
   logger.log(
-    `Configuration loaded: host=${config.mailHost}:${config.mailPort} mailbox=${config.mailMailbox} pollingEnabled=${config.enablePolling} webhookHost=${webhookHost}`,
+    `Configuration loaded: mailHost=${mailHost} pollingEnabled=${config.enablePolling} webhookHost=${webhookHost} approvalPanelHost=${adminPanelHost} corsOrigins=${config.corsOrigins.join(",")}`,
   );
   logger.log(`HTTP server running on port ${port} with prefix /api`);
 }

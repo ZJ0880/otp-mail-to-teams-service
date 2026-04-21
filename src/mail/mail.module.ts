@@ -1,4 +1,4 @@
-import { Module } from "@nestjs/common";
+﻿import { Module } from "@nestjs/common";
 import { ImapMailReaderService } from "./infrastructure/imap-mail-reader.service";
 import { MAIL_READER_PORT } from "./domain/mail-reader.port";
 

@@ -2,18 +2,24 @@
 
 ## Preparacion inicial
 
-### Correo dedicado
+### Correo OTP
 
-1. Crear buzon para OTP
-2. Activar IMAP
-3. Generar app password (si Gmail + 2FA)
-4. Configurar regla de reenvio de OTP
+1. Crear el buzón dedicado para OTP.
+2. Activar IMAP en el proveedor.
+3. Configurar credenciales del buzón en `MAIL_HOST`, `MAIL_PORT`, `MAIL_USER` y `MAIL_PASSWORD`.
+4. Definir `MAIL_MAILBOX`, filtros y expresiones OTP si aplica.
 
 ### Teams
 
 1. Crear canal operativo
 2. Configurar Incoming Webhook
 3. Guardar URL en `TEAMS_WEBHOOK_URL`
+
+### Aprobaciones
+
+1. Configurar `APP_ADMIN_PANEL_BASE_URL` con la URL publica del backend que expone `/api/approvals`.
+2. Configurar `APP_APPROVAL_LINK_SECRET` con secreto fuerte.
+3. Definir `APP_APPROVAL_LINK_TTL_MINUTES` segun politica de seguridad.
 
 ## Arranque
 
@@ -25,25 +31,28 @@ npm start
 
 ## Diagnostico
 
-**No procesa correos:**
-- Validar `MAIL_HOST`, `MAIL_PORT`, credenciales
-- Confirmar que `MAIL_MAILBOX` existe
+**No crea solicitudes:**
+- Validar token JWT y rol de usuario (`ADMIN` o `OPERATOR`).
+- Revisar que exista un perfil de credenciales por defecto.
+
+**No procesa correos OTP:**
+- Validar `MAIL_HOST`, `MAIL_PORT`, `MAIL_USER` y `MAIL_PASSWORD`.
+- Confirmar que `APP_ENABLE_POLLING=true` cuando se espera el ciclo automatico.
+- Revisar filtros de remitente/asunto y la expresion OTP.
 
 **No publica a Teams:**
 - Validar `TEAMS_WEBHOOK_URL`
 - Revisar conectividad HTTPS saliente
+- Revisar logs de `RequestApprovalNotifierService`
 
-**No extrae OTP:**
-- Ajustar `OTP_REGEX_PATTERNS` 
-- Revisar contenido real del correo
+**No funcionan enlaces de aprobacion:**
+- Validar `APP_APPROVAL_LINK_SECRET`
+- Verificar expiracion (`APP_APPROVAL_LINK_TTL_MINUTES`)
+- Confirmar `APP_ADMIN_PANEL_BASE_URL` publico/accesible
 
 ## Seguridad
 
 - Rotar credenciales periodicamente
 - Limitar acceso al canal Teams
-- No loguear OTP
+- No loguear secretos ni tokens
 - Ejecutar con reinicio automatico (systemd/Docker)
-
-1. Todos los casos A deben fallar en validacion con mensaje claro.
-2. Casos B y C deben registrar evento esperado sin comportamiento silencioso.
-3. Flujo feliz debe seguir funcionando tras restaurar configuracion valida.

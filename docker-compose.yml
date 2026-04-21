@@ -7,6 +7,9 @@ services:
       POSTGRES_DB: otp_ticket_db
       POSTGRES_USER: otp_user
       POSTGRES_PASSWORD: otp_password
+      TZ: America/Bogota
+      PGTZ: America/Bogota
+    command: ["postgres", "-c", "timezone=America/Bogota"]
     ports:
       - "5432:5432"
     volumes:

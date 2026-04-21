@@ -38,7 +38,8 @@ export class AppConfigService {
   }
 
   get otpRegexPatterns(): RegExp[] {
-    const raw = this.mustGet("OTP_REGEX_PATTERNS");
+    const raw = this.configService.get<string>("OTP_REGEX_PATTERNS") ?? String.raw`(\d{6})`;
+
     return raw
       .split("||")
       .map((value) => value.trim())
@@ -75,6 +76,23 @@ export class AppConfigService {
     return this.mustGet("APP_JWT_SECRET");
   }
 
+  get jwtIssuer(): string {
+    return this.configService.get<string>("AUTH_JWT_ISSUER") ?? "otp-mail-to-teams-service";
+  }
+
+  get jwtAudience(): string {
+    return this.configService.get<string>("AUTH_JWT_AUDIENCE") ?? "otp-mail-to-teams-clients";
+  }
+
+  get approvalLinkSecret(): string {
+    return this.configService.get<string>("APP_APPROVAL_LINK_SECRET") ?? this.jwtSecret;
+  }
+
+  get approvalLinkTtlMinutes(): number {
+    const value = this.configService.get<string>("APP_APPROVAL_LINK_TTL_MINUTES");
+    return value ? Number(value) : 15;
+  }
+
   get authTokenTtlMinutes(): number {
     const value = this.configService.get<string>("AUTH_TOKEN_TTL_MINUTES");
     return value ? Number(value) : 60;
@@ -90,6 +108,10 @@ export class AppConfigService {
       .split(",")
       .map((item) => item.trim())
       .filter((item) => item.length > 0);
+  }
+
+  get adminPanelBaseUrl(): string | undefined {
+    return this.configService.get<string>("APP_ADMIN_PANEL_BASE_URL") ?? undefined;
   }
 
   get databaseUrl(): string {

@@ -1,4 +1,4 @@
-import { Inject, Injectable, Logger } from "@nestjs/common";
+﻿import { Inject, Injectable, Logger } from "@nestjs/common";
 import { AppConfigService } from "../config/app-config.service";
 import { MailMessage } from "../mail/domain/mail-message.interface";
 import { MAIL_READER_PORT, MailReaderPort } from "../mail/domain/mail-reader.port";

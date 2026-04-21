@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, Logger } from "@nestjs/common";
+﻿import { BadRequestException, Injectable, Logger } from "@nestjs/common";
 import axios from "axios";
 import { ImapFlow } from "imapflow";
 import { simpleParser } from "mailparser";

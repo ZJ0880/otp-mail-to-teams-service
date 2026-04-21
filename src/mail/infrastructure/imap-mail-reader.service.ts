@@ -1,4 +1,4 @@
-import { Injectable, Logger, OnModuleDestroy } from "@nestjs/common";
+﻿import { Injectable, Logger, OnModuleDestroy } from "@nestjs/common";
 import { ImapFlow } from "imapflow";
 import { simpleParser } from "mailparser";
 import { AppConfigService } from "../../config/app-config.service";

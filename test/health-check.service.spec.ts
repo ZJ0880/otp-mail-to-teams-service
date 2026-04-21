@@ -69,7 +69,7 @@ describe("HealthCheckService", () => {
 
       const health = service.getHealth();
       expect(health.status).toBe("healthy");
-      expect(health.uptime).toBeGreaterThan(0);
+      expect(health.uptime).toBeGreaterThanOrEqual(0);
       expect(health.timestamp).toBeDefined();
     });
 

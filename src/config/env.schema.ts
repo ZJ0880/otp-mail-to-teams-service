@@ -35,6 +35,24 @@ class EnvironmentVariables {
   APP_JWT_SECRET!: string;
 
   @IsOptional()
+  @IsString()
+  AUTH_JWT_ISSUER?: string;
+
+  @IsOptional()
+  @IsString()
+  AUTH_JWT_AUDIENCE?: string;
+
+  @IsOptional()
+  @IsString()
+  APP_APPROVAL_LINK_SECRET?: string;
+
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  @Max(1440)
+  APP_APPROVAL_LINK_TTL_MINUTES?: number;
+
+  @IsOptional()
   @IsInt()
   @Min(5)
   @Max(1440)
@@ -43,6 +61,10 @@ class EnvironmentVariables {
   @IsOptional()
   @IsString()
   APP_CORS_ORIGINS?: string;
+
+  @IsOptional()
+  @IsUrl({ require_protocol: true, require_tld: false })
+  APP_ADMIN_PANEL_BASE_URL?: string;
 
   @IsString()
   @IsNotEmpty()

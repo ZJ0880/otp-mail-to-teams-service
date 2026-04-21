@@ -1,4 +1,4 @@
-export interface MailMessage {
+﻿export interface MailMessage {
   uid: string;
   subject: string;
   from: string;

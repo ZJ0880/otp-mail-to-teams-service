@@ -1,21 +1,23 @@
 # OTP Mail to Teams Service
 
-Servicio backend en NestJS que lee correos reenviados con OTP desde una cuenta dedicada, extrae el codigo vigente y lo publica en Microsoft Teams usando Incoming Webhook.
+Servicio backend en NestJS que mantiene el flujo de correo OTP hacia Teams y, ademas, gestiona solicitudes de acceso/ticket con aprobacion y auditoria.
 
 ## Caracteristicas
 
-- Lectura automatica de correos IMAP (Gmail).
-- Filtrado por remitentes y palabras clave de asunto.
-- Extraccion de OTP con regex configurables.
-- Validacion de vigencia (TTL).
-- Publicacion en Teams via webhook.
-- Logs en cada ciclo y mensaje.
+- Autenticacion JWT con roles (`ADMIN`, `OPERATOR`, `VIEWER`).
+- Gestion de usuarios (listar, registrar, cambiar rol, desactivar).
+- Lectura IMAP de correos con polling, filtros y extraccion de OTP.
+- Solicitudes de ticket con metadata (persona, email, plataforma, curso).
+- Tarjetas de Teams con enlaces de aprobacion firmados y expirables.
+- Endpoint de aprobacion para acciones `approve` / `reject` / `details`.
+- Auditoria de eventos sobre solicitudes y acciones.
 
 ## Requisitos
 
 - Node.js 20+
-- Cuenta de correo dedicada con acceso IMAP.
+- Cuenta de correo con IMAP habilitado para el flujo OTP.
 - Webhook de Microsoft Teams habilitado.
+- PostgreSQL y Redis disponibles (por docker compose o infraestructura propia).
 
 ## Instalacion
 
@@ -26,18 +28,18 @@ npm install
 ## Configuracion
 
 1. Duplica `.env.example` a `.env`.
-2. Ajusta valores reales de correo, regex y webhook.
+2. Ajusta valores reales de base de datos, auth y Teams.
 
 Variables clave:
 
-- `MAIL_HOST`, `MAIL_PORT`, `MAIL_SECURE`, `MAIL_USER`, `MAIL_PASSWORD`, `MAIL_MAILBOX`
-- `MAIL_ALLOWED_FROM` (csv opcional)
-- `MAIL_SUBJECT_KEYWORDS` (csv opcional)
-- `OTP_REGEX_PATTERNS` (regex separadas por `||`)
-- `OTP_TTL_MINUTES`
-- `APP_POLLING_INTERVAL_SECONDS`
-- `TEAMS_WEBHOOK_URL`
-- `TEAMS_MESSAGE_TEMPLATE` con placeholders `{otp}`, `{from}`, `{subject}`, `{receivedAt}`
+- `DATABASE_URL`
+- `REDIS_URL`
+- `APP_JWT_SECRET`, `AUTH_TOKEN_TTL_MINUTES`, `AUTH_JWT_ISSUER`, `AUTH_JWT_AUDIENCE`
+- `MAIL_HOST`, `MAIL_PORT`, `MAIL_USER`, `MAIL_PASSWORD`, `MAIL_MAILBOX`
+- `MAIL_ALLOWED_FROM`, `MAIL_SUBJECT_KEYWORDS`, `OTP_REGEX_PATTERNS`, `OTP_TTL_MINUTES`
+- `APP_ENABLE_POLLING`, `APP_POLLING_INTERVAL_SECONDS`
+- `TEAMS_WEBHOOK_URL`, `TEAMS_MESSAGE_TEMPLATE`
+- `APP_ADMIN_PANEL_BASE_URL`, `APP_APPROVAL_LINK_SECRET`, `APP_APPROVAL_LINK_TTL_MINUTES`
 
 ## Ejecucion
 
@@ -65,25 +67,26 @@ npm test
 
 ```
 src/
+  auth/         - autenticacion, roles, usuarios
   config/       - env y configuracion tipada
-  mail/         - lectura IMAP
-  otp/          - extraccion y validacion
-  teams/        - webhook de Teams
-  workflow/     - orquestacion y polling
+  database/     - prisma y repositorios
+  security/     - cifrado y hashing
+  settings/     - perfiles y validaciones
+  teams/        - notificacion y adaptive cards
+  workflow/     - solicitudes, aprobacion y auditoria
 ```
 
 ## Flujo
 
-1. Poll periodico para traer correos no leidos.
-2. Filtra por remitente y palabras clave.
-3. Extrae OTP del asunto o cuerpo.
-4. Valida vigencia (TTL).
-5. Envia a Teams.
-6. Marca como leido.
+1. Un usuario autenticado crea una solicitud en `/api/tickets/requests`.
+2. La solicitud queda en estado `pending` y se envia una tarjeta a Teams con enlaces firmados.
+3. El aprobador abre `/api/approvals/:token`, revisa detalles y ejecuta `approve` o `reject`.
+4. El estado se actualiza y queda trazado en auditoria.
+5. En paralelo, el polling de correo sigue leyendo IMAP, extrayendo OTP y publicando a Teams cuando `APP_ENABLE_POLLING=true`.
 
 ## Seguridad
 
-- Usa app password de Gmail (no la principal).
 - Webhook en canal privado de Teams.
-- No loguear OTP.
+- No loguear OTP, secretos ni tokens.
+- Usa secreto independiente para links de aprobacion.
 - Maneja secretos en gestor seguro (Vault, .env local, Secrets).
