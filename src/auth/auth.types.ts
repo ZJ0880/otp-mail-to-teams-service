@@ -4,8 +4,8 @@ import { ApiProperty } from "@nestjs/swagger";
 
 export class LoginDto {
   @ApiProperty({ example: "admin@otp.local" })
-  @IsString()
-  @IsNotEmpty()
+  @Transform(({ value }) => String(value ?? "").trim().toLowerCase())
+  @IsEmail()
   username!: string;
 
   @ApiProperty({ example: "change-me-now" })
@@ -31,6 +31,13 @@ export class RegisterUserDto {
   password!: string;
 
   @ApiProperty({ example: "OPERATOR", enum: ["ADMIN", "OPERATOR", "VIEWER"] })
+  @IsIn(["ADMIN", "OPERATOR", "VIEWER"])
+  role!: UserRole;
+}
+
+export class UpdateUserRoleDto {
+  @ApiProperty({ example: "OPERATOR", enum: ["ADMIN", "OPERATOR", "VIEWER"] })
+  @Transform(({ value }) => String(value ?? "").trim().toUpperCase())
   @IsIn(["ADMIN", "OPERATOR", "VIEWER"])
   role!: UserRole;
 }
@@ -68,6 +75,8 @@ export interface JwtPayload {
   sub: string;
   username: string;
   role: UserRole;
+  iss?: string;
+  aud?: string;
 }
 
 export type UserRole = "ADMIN" | "OPERATOR" | "VIEWER";

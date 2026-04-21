@@ -21,7 +21,7 @@ export class TokenAuthGuard implements CanActivate {
     const request = context.switchToHttp().getRequest<RequestWithUser>();
     const authorization = request.headers.authorization;
 
-    if (!authorization || !authorization.startsWith("Bearer ")) {
+    if (!authorization?.startsWith("Bearer ")) {
       throw new UnauthorizedException("Missing bearer token");
     }
 

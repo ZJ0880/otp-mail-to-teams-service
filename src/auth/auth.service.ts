@@ -1,4 +1,10 @@
-import { BadRequestException, Injectable, UnauthorizedException } from "@nestjs/common";
+import {
+  BadRequestException,
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+  UnauthorizedException,
+} from "@nestjs/common";
 import * as jwt from "jsonwebtoken";
 import { AppConfigService } from "../config/app-config.service";
 import { PrismaService } from "../database/prisma.service";
@@ -9,6 +15,7 @@ import {
   JwtPayload,
   LoginDto,
   RegisterUserDto,
+  UpdateUserRoleDto,
   UserRole,
   UserSummary,
 } from "./auth.types";
@@ -28,7 +35,7 @@ export class AuthService {
     const user = await this.prismaService.user.findFirst({
       where: {
         isActive: true,
-        OR: [{ email: input.username }, { name: input.username }],
+        email: input.username,
       },
       orderBy: { createdAt: "asc" },
     });
@@ -51,6 +58,8 @@ export class AuthService {
 
     const token = jwt.sign(payload, this.appConfigService.jwtSecret, {
       expiresIn: `${this.appConfigService.authTokenTtlMinutes}m`,
+      issuer: this.appConfigService.jwtIssuer,
+      audience: this.appConfigService.jwtAudience,
     });
 
     return {
@@ -93,15 +102,69 @@ export class AuthService {
     this.ensureAdmin(requester.role);
 
     const users = await this.prismaService.user.findMany({
+      where: {
+        isActive: true,
+      },
       orderBy: { createdAt: "desc" },
     });
 
     return users.map((user) => this.toSummary(user));
   }
 
+  async updateUserRole(
+    requester: AuthenticatedUser,
+    userId: string,
+    input: UpdateUserRoleDto,
+  ): Promise<UserSummary> {
+    this.ensureAdmin(requester.role);
+
+    const existing = await this.prismaService.user.findUnique({
+      where: { id: userId },
+    });
+
+    if (!existing?.isActive) {
+      throw new NotFoundException("User not found");
+    }
+
+    const updated = await this.prismaService.user.update({
+      where: { id: userId },
+      data: {
+        role: input.role,
+      },
+    });
+
+    return this.toSummary(updated);
+  }
+
+  async deleteUser(requester: AuthenticatedUser, userId: string): Promise<void> {
+    this.ensureAdmin(requester.role);
+
+    if (requester.userId === userId) {
+      throw new BadRequestException("You cannot delete your own user");
+    }
+
+    const existing = await this.prismaService.user.findUnique({
+      where: { id: userId },
+    });
+
+    if (!existing?.isActive) {
+      throw new NotFoundException("User not found");
+    }
+
+    await this.prismaService.user.update({
+      where: { id: userId },
+      data: {
+        isActive: false,
+      },
+    });
+  }
+
   validateToken(token: string): AuthenticatedUser {
     try {
-      const decoded = jwt.verify(token, this.appConfigService.jwtSecret) as JwtPayload;
+      const decoded = jwt.verify(token, this.appConfigService.jwtSecret, {
+        issuer: this.appConfigService.jwtIssuer,
+        audience: this.appConfigService.jwtAudience,
+      }) as JwtPayload;
 
       return {
         userId: decoded.sub,
@@ -115,7 +178,7 @@ export class AuthService {
 
   private ensureAdmin(role: UserRole): void {
     if (role !== "ADMIN") {
-      throw new UnauthorizedException("Admin role required");
+      throw new ForbiddenException("Admin role required");
     }
   }
 

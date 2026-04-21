@@ -1,14 +1,26 @@
-import { Body, Controller, Get, Post, Req, UseGuards } from "@nestjs/common";
+import { Body, Controller, Delete, Get, HttpCode, Param, Patch, Post, Req, UseGuards } from "@nestjs/common";
 import {
+  ApiBadRequestResponse,
   ApiBearerAuth,
   ApiBody,
+  ApiForbiddenResponse,
+  ApiNoContentResponse,
+  ApiNotFoundResponse,
   ApiOkResponse,
   ApiOperation,
+  ApiParam,
   ApiTags,
   ApiUnauthorizedResponse,
 } from "@nestjs/swagger";
 import { AuthService } from "./auth.service";
-import { AuthSessionPayload, AuthTokenPayload, LoginDto, RegisterUserDto, UserSummary } from "./auth.types";
+import {
+  AuthSessionPayload,
+  AuthTokenPayload,
+  LoginDto,
+  RegisterUserDto,
+  UpdateUserRoleDto,
+  UserSummary,
+} from "./auth.types";
 import { TokenAuthGuard } from "./token-auth.guard";
 import { Roles } from "./roles.decorator";
 import { RolesGuard } from "./roles.guard";
@@ -89,5 +101,44 @@ export class AuthController {
     @Body() input: RegisterUserDto,
   ): Promise<UserSummary> {
     return this.authService.registerUser(request.user, input);
+  }
+
+  @Patch("users/:userId/role")
+  @UseGuards(TokenAuthGuard, RolesGuard)
+  @Roles("ADMIN")
+  @ApiBearerAuth("bearer")
+  @ApiOperation({ summary: "Update user role (admin only)" })
+  @ApiParam({ name: "userId", example: "clx123abc" })
+  @ApiBody({ type: UpdateUserRoleDto })
+  @ApiOkResponse({ description: "Updated user", type: Object })
+  @ApiBadRequestResponse({ description: "Invalid request body" })
+  @ApiUnauthorizedResponse({ description: "Missing or invalid token" })
+  @ApiForbiddenResponse({ description: "Admin role required" })
+  @ApiNotFoundResponse({ description: "User not found" })
+  updateUserRole(
+    @Req() request: RequestWithUser,
+    @Param("userId") userId: string,
+    @Body() input: UpdateUserRoleDto,
+  ): Promise<UserSummary> {
+    return this.authService.updateUserRole(request.user, userId, input);
+  }
+
+  @Delete("users/:userId")
+  @UseGuards(TokenAuthGuard, RolesGuard)
+  @Roles("ADMIN")
+  @HttpCode(204)
+  @ApiBearerAuth("bearer")
+  @ApiOperation({ summary: "Delete user (soft delete, admin only)" })
+  @ApiParam({ name: "userId", example: "clx123abc" })
+  @ApiNoContentResponse({ description: "User deleted" })
+  @ApiBadRequestResponse({ description: "Invalid operation (e.g., self-delete)" })
+  @ApiUnauthorizedResponse({ description: "Missing or invalid token" })
+  @ApiForbiddenResponse({ description: "Admin role required" })
+  @ApiNotFoundResponse({ description: "User not found" })
+  async deleteUser(
+    @Req() request: RequestWithUser,
+    @Param("userId") userId: string,
+  ): Promise<void> {
+    await this.authService.deleteUser(request.user, userId);
   }
 }
