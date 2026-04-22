@@ -1,4 +1,4 @@
-import { Instant } from "../../domain";
+import { Instant } from "../../../domain";
 
 export interface ClockPort {
   now(): Instant;

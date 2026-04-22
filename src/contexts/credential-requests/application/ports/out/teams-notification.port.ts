@@ -1,4 +1,4 @@
-import type { CredentialRequestId, Platform, RequestStatus, RequesterEmail } from "../../domain";
+import type { CredentialRequestId, Platform, RequestStatus, RequesterEmail } from "../../../domain";
 
 export interface CredentialRequestSummary {
   id: CredentialRequestId;

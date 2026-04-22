@@ -1,4 +1,4 @@
-import type { CredentialRequestId, Instant } from "../../domain";
+import type { CredentialRequestId, Instant } from "../../../domain";
 
 export type AuditEventType =
   | "CREDENTIAL_REQUEST_CREATED"

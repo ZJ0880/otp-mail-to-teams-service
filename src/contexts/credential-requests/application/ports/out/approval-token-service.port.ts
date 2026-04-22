@@ -1,6 +1,4 @@
-import type { DecisionType } from "../../domain";
-import type { CredentialRequestId } from "../../domain";
-import type { Instant } from "../../domain";
+import type { CredentialRequestId, DecisionType, Instant } from "../../../domain";
 
 export interface ApprovalTokenPayload {
   requestId: CredentialRequestId;

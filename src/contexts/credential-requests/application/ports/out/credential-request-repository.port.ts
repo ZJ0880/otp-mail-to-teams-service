@@ -1,5 +1,4 @@
-import { CredentialRequest, CredentialRequestId, RequestStatus } from "../../domain";
-import { Instant } from "../../domain";
+import { CredentialRequest, CredentialRequestId, RequestStatus, Instant } from "../../../domain";
 import { PaginationInput, PaginatedResult } from "../../contracts/pagination";
 
 export interface CredentialRequestListFilters {

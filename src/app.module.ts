@@ -1,6 +1,5 @@
 import { Module } from "@nestjs/common";
 import { ConfigModule } from "@nestjs/config";
-import { AuthModule } from "./auth/auth.module";
 import { AppConfigModule } from "./config/config.module";
 import { DatabaseModule } from "./database/database.module";
 import { validateEnvironment } from "./config/env.schema";
@@ -11,6 +10,7 @@ import { TeamsModule } from "./teams/teams.module";
 import { WorkflowModule } from "./workflow/workflow.module";
 import { ObservabilityModule } from "./observability/observability.module";
 import { SettingsModule } from "./settings/settings.module";
+import { AdminAuthModule } from "./contexts/admin-auth/infrastructure/nest/admin-auth.module";
 
 @Module({
   imports: [
@@ -18,7 +18,7 @@ import { SettingsModule } from "./settings/settings.module";
       isGlobal: true,
       validate: validateEnvironment,
     }),
-    AuthModule,
+    AdminAuthModule,
     AppConfigModule,
     DatabaseModule,
     SecurityModule,

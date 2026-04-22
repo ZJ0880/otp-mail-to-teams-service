@@ -1,10 +1,10 @@
 import { Module } from "@nestjs/common";
-import { AuthModule } from "../auth/auth.module";
+import { AdminAuthModule } from "../contexts/admin-auth/infrastructure/nest/admin-auth.module";
 import { SettingsController } from "./settings.controller";
 import { SettingsService } from "./settings.service";
 
 @Module({
-  imports: [AuthModule],
+  imports: [AdminAuthModule],
   controllers: [SettingsController],
   providers: [SettingsService],
 })

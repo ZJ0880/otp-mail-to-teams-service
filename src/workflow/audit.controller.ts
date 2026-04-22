@@ -1,20 +1,17 @@
 import { BadRequestException, Controller, Get, Query, UseGuards } from "@nestjs/common";
 import { ApiBearerAuth } from "@nestjs/swagger";
 import { Prisma } from "@prisma/client";
-import { Roles } from "../auth/roles.decorator";
-import { RolesGuard } from "../auth/roles.guard";
-import { TokenAuthGuard } from "../auth/token-auth.guard";
+import { AdminAuthGuard } from "../contexts/admin-auth/infrastructure/nest/admin-auth.guard";
 import { PrismaService } from "../database/prisma.service";
 import { AuditEventsListResponse, AuditEventsQueryDto, AuditEventResponse } from "./audit-events.dto";
 
 @Controller("audit")
-@UseGuards(TokenAuthGuard, RolesGuard)
+@UseGuards(AdminAuthGuard)
 @ApiBearerAuth("bearer")
 export class AuditController {
   constructor(private readonly prismaService: PrismaService) {}
 
   @Get("events")
-  @Roles("ADMIN", "OPERATOR", "VIEWER")
   async listEvents(@Query() query: AuditEventsQueryDto): Promise<AuditEventsListResponse> {
     const page = this.normalizePositiveNumber(query.page, 1);
     const pageSize = this.normalizePositiveNumber(query.pageSize, 20, 100);

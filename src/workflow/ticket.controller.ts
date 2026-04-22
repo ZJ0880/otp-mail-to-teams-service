@@ -1,8 +1,6 @@
 import { Body, Controller, Get, Param, Post, Query, Req, UseGuards } from "@nestjs/common";
 import { ApiBearerAuth } from "@nestjs/swagger";
-import { TokenAuthGuard } from "../auth/token-auth.guard";
-import { Roles } from "../auth/roles.decorator";
-import { RolesGuard } from "../auth/roles.guard";
+import { AdminAuthGuard } from "../contexts/admin-auth/infrastructure/nest/admin-auth.guard";
 import { ManualProcessTicketsDto } from "./manual-process.dto";
 import { ManualOtpProcessingService } from "./manual-otp-processing.service";
 import { OtpProcessingResult, OtpProcessingService } from "./otp-processing.service";
@@ -15,16 +13,15 @@ import {
 } from "./ticket-requests.dto";
 import { TicketRequestsService } from "./ticket-requests.service";
 
-interface RequestWithUser {
-  user: {
-    userId: string;
+interface RequestWithAdmin {
+  admin: {
+    adminId: string;
     username: string;
-    role: "ADMIN" | "OPERATOR" | "VIEWER";
   };
 }
 
 @Controller("tickets")
-@UseGuards(TokenAuthGuard, RolesGuard)
+@UseGuards(AdminAuthGuard)
 @ApiBearerAuth("bearer")
 export class TicketController {
   constructor(
@@ -34,41 +31,57 @@ export class TicketController {
   ) {}
 
   @Post("process")
-  @Roles("ADMIN", "OPERATOR")
   async processTickets(): Promise<OtpProcessingResult> {
     return this.otpProcessingService.processUnreadMessages();
   }
 
   @Post("process/manual")
-  @Roles("ADMIN", "OPERATOR")
   async processTicketsManual(@Body() input: ManualProcessTicketsDto): Promise<OtpProcessingResult> {
     return this.manualOtpProcessingService.processUnreadMessages(input);
   }
 
   @Get("requests")
-  @Roles("ADMIN", "OPERATOR", "VIEWER")
   async listRequests(
-    @Req() request: RequestWithUser,
+    @Req() request: RequestWithAdmin,
     @Query() query: ListTicketRequestsQueryDto,
   ): Promise<TicketRequestListResponse> {
-    return this.ticketRequestsService.listRequests(request.user, query);
+    return this.ticketRequestsService.listRequests(
+      {
+        userId: request.admin.adminId,
+        username: request.admin.username,
+        role: "ADMIN",
+      },
+      query,
+    );
   }
 
   @Get("requests/:requestId")
-  @Roles("ADMIN", "OPERATOR", "VIEWER")
   async getRequestById(
-    @Req() request: RequestWithUser,
+    @Req() request: RequestWithAdmin,
     @Param("requestId") requestId: string,
   ): Promise<TicketRequestDetailResponse> {
-    return this.ticketRequestsService.getRequestById(request.user, requestId);
+    return this.ticketRequestsService.getRequestById(
+      {
+        userId: request.admin.adminId,
+        username: request.admin.username,
+        role: "ADMIN",
+      },
+      requestId,
+    );
   }
 
   @Post("requests")
-  @Roles("ADMIN", "OPERATOR")
   async createRequest(
-    @Req() request: RequestWithUser,
+    @Req() request: RequestWithAdmin,
     @Body() input: CreateTicketRequestDto,
   ): Promise<TicketRequestResponseItem> {
-    return this.ticketRequestsService.createRequest(request.user, input);
+    return this.ticketRequestsService.createRequest(
+      {
+        userId: request.admin.adminId,
+        username: request.admin.username,
+        role: "ADMIN",
+      },
+      input,
+    );
   }
 }

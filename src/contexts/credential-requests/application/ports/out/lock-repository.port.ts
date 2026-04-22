@@ -1,4 +1,4 @@
-import { Instant, LockKey } from "../../domain";
+import { Instant, LockKey } from "../../../domain";
 
 export interface LockInfo {
   key: LockKey;
