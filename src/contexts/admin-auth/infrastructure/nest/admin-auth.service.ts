@@ -54,11 +54,12 @@ export class AdminAuthService {
         issuer: this.appConfigService.jwtIssuer,
         audience: this.appConfigService.jwtAudience,
       }) as JwtAdminPayload;
+      const role: AdminSession["role"] = decoded.role === "USER" ? "USER" : "ADMIN";
 
       return {
         userId: decoded.sub,
         username: decoded.username,
-        role: decoded.role ?? "ADMIN",
+        role,
       };
     } catch {
       throw new UnauthorizedException("Invalid or expired token");

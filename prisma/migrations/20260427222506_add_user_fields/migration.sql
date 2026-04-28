@@ -22,7 +22,7 @@ ALTER TABLE "public"."TicketRequest" ALTER COLUMN "status" DROP DEFAULT;
 ALTER TABLE "public"."TicketRequest" ALTER COLUMN "status" TYPE "public"."TicketStatus_new" USING ("status"::text::"public"."TicketStatus_new");
 ALTER TYPE "public"."TicketStatus" RENAME TO "TicketStatus_old";
 ALTER TYPE "public"."TicketStatus_new" RENAME TO "TicketStatus";
-DROP TYPE "public"."TicketStatus_old";
+DROP TYPE public.TicketStatus_old;
 ALTER TABLE "public"."TicketRequest" ALTER COLUMN "status" SET DEFAULT 'PENDING';
 COMMIT;
 
@@ -33,7 +33,7 @@ ALTER TABLE "public"."User" ALTER COLUMN "role" DROP DEFAULT;
 ALTER TABLE "public"."User" ALTER COLUMN "role" TYPE "public"."UserRole_new" USING ("role"::text::"public"."UserRole_new");
 ALTER TYPE "public"."UserRole" RENAME TO "UserRole_old";
 ALTER TYPE "public"."UserRole_new" RENAME TO "UserRole";
-DROP TYPE "public"."UserRole_old";
+DROP TYPE public.UserRole_old;
 ALTER TABLE "public"."User" ALTER COLUMN "role" SET DEFAULT 'USER';
 COMMIT;
 
@@ -97,10 +97,10 @@ DROP TABLE "public"."RateLimitEvent";
 DROP TABLE "public"."TicketAttempt";
 
 -- DropEnum
-DROP TYPE "public"."AttemptResult";
+DROP TYPE public.AttemptResult;
 
 -- DropEnum
-DROP TYPE "public"."NotificationType";
+DROP TYPE public.NotificationType;
 
 -- CreateIndex
 CREATE INDEX "User_role_isActive_idx" ON "public"."User"("role", "isActive");

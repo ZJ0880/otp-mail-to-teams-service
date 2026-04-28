@@ -1,1 +1,1 @@
-export const PASSWORD_HASH_PORT = "PASSWORD_HASH_PORT";
+export const PASSWORD_HASH_PORT = Symbol("PASSWORD_HASH_PORT");

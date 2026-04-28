@@ -3,7 +3,18 @@ import { hashPassword } from "../src/security/password-hash";
 
 const prisma = new PrismaClient();
 
-const seedPassword = process.env.APP_ADMIN_PASSWORD ?? "change-me-now";
+const nodeProcess = globalThis as unknown as {
+  process?: {
+    env: Record<string, string | undefined>;
+    exit(code: number): never;
+  };
+};
+
+const seedPassword = nodeProcess.process?.env.APP_ADMIN_PASSWORD;
+if (!seedPassword) {
+  throw new Error("APP_ADMIN_PASSWORD is required to seed the admin user");
+}
+
 const passwordHash = hashPassword(seedPassword);
 
 async function main(): Promise<void> {
@@ -20,7 +31,6 @@ async function main(): Promise<void> {
       passwordHash,
     },
   });
-  // Note: only admin is seeded by default to avoid enum/value mismatches with existing migrations.
 }
 
 main()
@@ -31,5 +41,5 @@ main()
     // eslint-disable-next-line no-console
     console.error("Prisma seed failed:", error);
     await prisma.$disconnect();
-    process.exit(1);
+    nodeProcess.process?.exit(1);
   });

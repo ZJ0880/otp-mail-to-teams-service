@@ -1,7 +1,7 @@
 export interface AdminSession {
   userId: string;
   username: string;
-  role: "ADMIN" | "USER" | string;
+  role: "ADMIN" | "USER";
 }
 
 export interface AdminTokenPayload {

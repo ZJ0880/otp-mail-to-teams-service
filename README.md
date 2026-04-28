@@ -4,8 +4,8 @@ Servicio backend en NestJS para gestionar solicitudes de credenciales con enfoqu
 
 ## Caracteristicas
 
-- Autenticacion JWT con roles (`ADMIN`, `OPERATOR`, `VIEWER`).
-- Gestion de usuarios (listar, registrar, cambiar rol, desactivar).
+- Autenticacion JWT con roles (`ADMIN`, `USER`).
+- Gestion de usuarios (registrar y crear administradores).
 - Solicitudes de credenciales con metadata (email, plataforma, curso, motivo).
 - Flujo de aprobacion y rechazo con token firmado y expiracion.
 - Endpoints publicos, administrativos e integracion para ejecutar decisiones.
@@ -34,6 +34,7 @@ Variables clave:
 - `APP_JWT_SECRET`, `AUTH_TOKEN_TTL_MINUTES`, `AUTH_JWT_ISSUER`, `AUTH_JWT_AUDIENCE`
 - `TEAMS_WEBHOOK_URL`
 - `APP_ADMIN_PANEL_BASE_URL`, `APP_APPROVAL_LINK_SECRET`, `APP_APPROVAL_LINK_TTL_MINUTES`
+- `APP_ADMIN_PASSWORD` para el seed inicial del admin
 
 ## Ejecucion
 
@@ -41,6 +42,16 @@ Desarrollo:
 
 ```bash
 npm run start:dev
+```
+
+Base de datos y seed:
+
+```bash
+npm run db:up
+npm run db:generate
+npm run db:deploy
+$env:APP_ADMIN_PASSWORD="UnaClaveFuerte123!"
+npm run db:seed
 ```
 
 Build + produccion:
