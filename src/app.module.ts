@@ -7,10 +7,9 @@ import { MailModule } from "./mail/mail.module";
 import { OtpModule } from "./otp/otp.module";
 import { SecurityModule } from "./security/security.module";
 import { TeamsModule } from "./teams/teams.module";
-import { WorkflowModule } from "./workflow/workflow.module";
 import { ObservabilityModule } from "./observability/observability.module";
-import { SettingsModule } from "./settings/settings.module";
 import { AdminAuthModule } from "./contexts/admin-auth/infrastructure/nest/admin-auth.module";
+import { UsersModule } from "./contexts/users/infrastructure/nest/users.module";
 
 @Module({
   imports: [
@@ -19,14 +18,13 @@ import { AdminAuthModule } from "./contexts/admin-auth/infrastructure/nest/admin
       validate: validateEnvironment,
     }),
     AdminAuthModule,
+    UsersModule,
     AppConfigModule,
     DatabaseModule,
     SecurityModule,
     MailModule,
     OtpModule,
     TeamsModule,
-    SettingsModule,
-    WorkflowModule,
     ObservabilityModule,
   ],
 })

@@ -1,6 +1,7 @@
 export interface AdminSession {
-  adminId: string;
+  userId: string;
   username: string;
+  role: "ADMIN" | "USER" | string;
 }
 
 export interface AdminTokenPayload {
@@ -10,8 +11,9 @@ export interface AdminTokenPayload {
 }
 
 export interface JwtAdminPayload {
-  sub: string;
+  sub: string; // user id or special subject
   username: string;
+  role?: string;
   iss?: string;
   aud?: string;
 }

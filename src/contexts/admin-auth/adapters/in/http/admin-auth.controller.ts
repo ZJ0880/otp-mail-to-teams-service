@@ -2,6 +2,7 @@ import { Body, Controller, Post } from "@nestjs/common";
 import { ApiBody, ApiOkResponse, ApiOperation, ApiTags, ApiUnauthorizedResponse } from "@nestjs/swagger";
 import { AdminAuthService } from "../../../infrastructure/nest/admin-auth.service";
 import { AdminLoginDto } from "./admin-login.dto";
+import { AdminLoginResponseDto } from "./admin-login-response.dto";
 import { AdminTokenPayload } from "../../../infrastructure/nest/admin-auth.types";
 
 @Controller("auth")
@@ -12,7 +13,7 @@ export class AdminAuthController {
   @Post("login")
   @ApiOperation({ summary: "Authenticate admin and issue JWT token" })
   @ApiBody({ type: AdminLoginDto })
-  @ApiOkResponse({ description: "Successful login" })
+  @ApiOkResponse({ type: AdminLoginResponseDto, description: "Successful login" })
   @ApiUnauthorizedResponse({ description: "Invalid credentials" })
   login(@Body() input: AdminLoginDto): Promise<AdminTokenPayload> {
     return this.adminAuthService.login(input);

@@ -1,15 +1,16 @@
-import { BadRequestException, Injectable, UnauthorizedException } from "@nestjs/common";
+import { BadRequestException, Inject, Injectable, UnauthorizedException } from "@nestjs/common";
 import * as jwt from "jsonwebtoken";
 import { AppConfigService } from "../../../../config/app-config.service";
-import { PrismaService } from "../../../../database/prisma.service";
-import { verifyPassword } from "../../../../security/password-hash";
 import { AdminTokenPayload, JwtAdminPayload, AdminSession } from "./admin-auth.types";
+import { USER_AUTHENTICATION_PORT } from "../../../users/infrastructure/nest/users-authentication.tokens";
+import { UserAuthenticationPort } from "../../../users/application/ports/out/user-authentication.port";
+
 
 @Injectable()
 export class AdminAuthService {
   constructor(
     private readonly appConfigService: AppConfigService,
-    private readonly prismaService: PrismaService,
+    @Inject(USER_AUTHENTICATION_PORT) private readonly userAuthentication: UserAuthenticationPort,
   ) {}
 
   async login(input: { username: string; password: string }): Promise<AdminTokenPayload> {
@@ -17,27 +18,21 @@ export class AdminAuthService {
       throw new BadRequestException("username and password are required");
     }
 
-    const user = await this.prismaService.user.findFirst({
-      where: {
-        isActive: true,
-        email: input.username,
-      },
-      orderBy: { createdAt: "asc" },
+    const username = input.username.trim().toLowerCase();
+    const user = await this.userAuthentication.authenticate({
+      email: username,
+      password: input.password,
     });
 
-    if (!user?.passwordHash) {
-      throw new UnauthorizedException("Invalid credentials");
-    }
-
-    const passwordMatches = verifyPassword(input.password, user.passwordHash);
-    if (!passwordMatches) {
-      throw new UnauthorizedException("Invalid credentials");
+    if (user.role !== "ADMIN") {
+      throw new UnauthorizedException("Admin role required");
     }
 
     const expiresAtEpochMs = Date.now() + this.appConfigService.authTokenTtlMinutes * 60 * 1000;
     const payload: JwtAdminPayload = {
       sub: user.id,
       username: user.email,
+      role: user.role,
     };
 
     const token = jwt.sign(payload, this.appConfigService.jwtSecret, {
@@ -49,7 +44,7 @@ export class AdminAuthService {
     return {
       token,
       expiresAt: new Date(expiresAtEpochMs).toISOString(),
-      displayName: user.name,
+      displayName: user.name ?? user.email,
     };
   }
 
@@ -61,8 +56,9 @@ export class AdminAuthService {
       }) as JwtAdminPayload;
 
       return {
-        adminId: decoded.sub,
+        userId: decoded.sub,
         username: decoded.username,
+        role: decoded.role ?? "ADMIN",
       };
     } catch {
       throw new UnauthorizedException("Invalid or expired token");

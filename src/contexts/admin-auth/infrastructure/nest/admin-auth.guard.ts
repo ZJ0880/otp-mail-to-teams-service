@@ -22,7 +22,11 @@ export class AdminAuthGuard implements CanActivate {
     }
 
     const token = authorization.slice("Bearer ".length).trim();
-    request.admin = this.adminAuthService.validateToken(token);
+    const session = this.adminAuthService.validateToken(token);
+    if (session?.role !== "ADMIN") {
+      throw new UnauthorizedException("Admin role required");
+    }
+    request.admin = session;
     return true;
   }
 }

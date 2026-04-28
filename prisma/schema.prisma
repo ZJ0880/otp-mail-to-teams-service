@@ -8,133 +8,46 @@ datasource db {
 }
 
 enum UserRole {
+  USER
   ADMIN
-  OPERATOR
-  VIEWER
 }
 
 enum TicketStatus {
   PENDING
-  PROCESSING
-  SUCCESS
-  FAILED
-  RETRYING
-  CANCELLED
-}
-
-enum AttemptResult {
-  SUCCESS
-  FAILED
-  NO_MATCH
-  EXPIRED
-  FILTERED
-}
-
-enum NotificationType {
-  TICKET_CREATED
-  TICKET_STATUS_CHANGED
-  TICKET_RETRY_SCHEDULED
-  CONFIG_UPDATED
-  RATE_LIMIT_BLOCKED
-  SYSTEM_ALERT
+  APPROVED
+  REJECTED
 }
 
 model User {
-  id             String            @id @default(cuid())
-  email          String            @unique
-  name           String
-  role           UserRole          @default(OPERATOR)
-  isActive       Boolean           @default(true)
-  passwordHash   String?
-  createdAt      DateTime          @default(now())
-  updatedAt      DateTime          @updatedAt
-  credentialProfiles CredentialProfile[]
-  ticketRequests TicketRequest[]
-  auditLogs      AuditLog[]
-  rateLimitEvents RateLimitEvent[]
-  notificationEvents NotificationEvent[]
-}
+  id           String   @id @default(cuid())
+  name         String
+  lastName     String?
+  document     String?
+  email        String   @unique
+  passwordHash String
+  role         UserRole @default(USER)
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
-model CredentialProfile {
-  id                      String         @id @default(cuid())
-  ownerUserId             String
-  profileName             String
-  mailHost                String
-  mailPort                Int
-  mailSecure              Boolean
-  mailUser                String
-  mailMailbox             String
-  mailPasswordEncrypted   String
-  teamsWebhookEncrypted   String
-  teamsMessageTemplate    String
-  allowedFromCsv          String?
-  subjectKeywordsCsv      String?
-  otpRegexPatterns        String
-  otpTtlMinutes           Int
-  isDefault               Boolean        @default(false)
-  createdAt               DateTime       @default(now())
-  updatedAt               DateTime       @updatedAt
-  owner                   User           @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
-  ticketRequests          TicketRequest[]
-
-  @@index([ownerUserId])
-  @@unique([ownerUserId, profileName])
-  @@unique([id, ownerUserId])
+  @@index([role, isActive])
+  @@index([email, isActive])
 }
 
 model TicketRequest {
-  id               String         @id @default(cuid())
-  requestedByUserId String
-  profileId        String
-  requesterName    String         @default("")
-  requesterEmail   String         @default("")
-  status           TicketStatus   @default(PENDING)
-  requestReason    String?
-  requestedAt      DateTime       @default(now())
-  startedAt        DateTime?
-  finishedAt       DateTime?
-  createdAt        DateTime       @default(now())
-  updatedAt        DateTime       @updatedAt
-  requestedBy      User           @relation(fields: [requestedByUserId], references: [id], onDelete: Restrict)
-  profile          CredentialProfile @relation(fields: [profileId], references: [id], onDelete: Restrict)
-  attempts         TicketAttempt[]
-  otpResults       OtpResult[]
+  id              String       @id @default(cuid())
+  requesterName   String       @default("")
+  requesterEmail  String       @default("")
+  status          TicketStatus  @default(PENDING)
+  requestReason   String?
+  requestedAt     DateTime     @default(now())
+  resolvedAt      DateTime?
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
 
-  @@index([requestedByUserId])
-  @@index([profileId])
   @@index([status, requestedAt])
   @@index([requesterEmail, requestedAt])
   @@index([requesterName, requestedAt])
-}
-
-model TicketAttempt {
-  id            String        @id @default(cuid())
-  ticketRequestId String
-  attemptNumber Int
-  result        AttemptResult
-  errorCode     String?
-  errorMessage  String?
-  durationMs    Int?
-  executedAt    DateTime      @default(now())
-  createdAt     DateTime      @default(now())
-  ticketRequest TicketRequest @relation(fields: [ticketRequestId], references: [id], onDelete: Cascade)
-
-  @@unique([ticketRequestId, attemptNumber])
-  @@index([ticketRequestId, executedAt])
-}
-
-model OtpResult {
-  id                 String       @id @default(cuid())
-  ticketRequestId    String
-  otpMasked          String
-  source             String
-  receivedAt         DateTime
-  deliveredToTeams   Boolean      @default(false)
-  deliveredAt        DateTime?
-  createdAt          DateTime     @default(now())
-  ticketRequest      TicketRequest @relation(fields: [ticketRequestId], references: [id], onDelete: Cascade)
-
-  @@index([ticketRequestId])
 }
 
 model AuditLog {
@@ -148,34 +61,7 @@ model AuditLog {
   ip          String?
   userAgent   String?
   createdAt   DateTime  @default(now())
-  actor       User      @relation(fields: [actorUserId], references: [id], onDelete: Restrict)
 
   @@index([actorUserId, createdAt])
   @@index([entityType, entityId])
-}
-
-model RateLimitEvent {
-  id         String   @id @default(cuid())
-  userId     String
-  endpoint   String
-  blocked    Boolean
-  windowKey  String
-  createdAt  DateTime @default(now())
-  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([userId, endpoint, createdAt])
-}
-
-model NotificationEvent {
-  id          String            @id @default(cuid())
-  userId      String
-  eventType   NotificationType
-  payloadJson Json
-  delivered   Boolean           @default(false)
-  deliveredAt DateTime?
-  createdAt   DateTime          @default(now())
-  user        User              @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([userId, createdAt])
-  @@index([eventType, createdAt])
 }
