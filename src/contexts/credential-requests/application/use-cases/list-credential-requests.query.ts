@@ -20,8 +20,8 @@ export interface CredentialRequestListItemView {
   requesterEmail: string;
   platform: string;
   status: RequestStatus;
-  createdAtIso: string;
-  decidedAtIso?: string;
+  createdAt: string;
+  decidedAt?: string;
 }
 
 export type ListCredentialRequestsOutput = PaginatedResult<CredentialRequestListItemView>;

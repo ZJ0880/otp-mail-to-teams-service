@@ -5,7 +5,7 @@ export interface CredentialRequestSummary {
   requesterEmail: RequesterEmail;
   platform: Platform;
   status: RequestStatus;
-  createdAtIso: string;
+  createdAt: string;
 }
 
 export interface TeamsNotificationPort {

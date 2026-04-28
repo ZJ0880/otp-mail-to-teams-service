@@ -2,10 +2,8 @@ import type { UseCase } from "../contracts/use-case";
 import type { CredentialRequestId, Instant, RequestStatus } from "../../domain";
 
 export interface CreateCredentialRequestInput {
-  requesterEmail: string;
-  platform: string;
-  course?: string;
-  reason?: string;
+  email: string;
+  password: string;
 }
 
 export interface CreateCredentialRequestOutput {

@@ -1,12 +1,12 @@
 import type { RequestStatus } from "./request-status";
 import { AlreadyDecidedError } from "./errors/already-decided.error";
-import { CredentialRequestId } from "./value-objects/credential-request-id";
+import type{ CredentialRequestId } from "./value-objects/credential-request-id";
 import { Decision } from "./value-objects/decision";
-import { Instant } from "./value-objects/instant";
+import type{ Instant } from "./value-objects/instant";
 import { LockKey } from "./value-objects/lock-key";
-import { Platform } from "./value-objects/platform";
-import { RequestContext } from "./value-objects/request-context";
-import { RequesterEmail } from "./value-objects/requester-email";
+import type{ Platform } from "./value-objects/platform";
+import{ RequestContext } from "./value-objects/request-context";
+import type { RequesterEmail } from "./value-objects/requester-email";
 
 export class CredentialRequest {
   private constructor(

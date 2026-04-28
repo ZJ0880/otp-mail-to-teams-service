@@ -38,7 +38,7 @@ async function bootstrap(): Promise<void> {
 
   await app.listen(port);
 
-  logger.log("Workflow API started.");
+  logger.log("Credential Requests API started.");
   logger.log(
     `Configuration loaded: mailHost=${mailHost} pollingEnabled=${config.enablePolling} webhookHost=${webhookHost} approvalPanelHost=${adminPanelHost} corsOrigins=${config.corsOrigins.join(",")}`,
   );

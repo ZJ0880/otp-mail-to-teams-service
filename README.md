@@ -1,22 +1,19 @@
 # OTP Mail to Teams Service
 
-Servicio backend en NestJS que mantiene el flujo de correo OTP hacia Teams y, ademas, gestiona solicitudes de acceso/ticket con aprobacion y auditoria.
+Servicio backend en NestJS para gestionar solicitudes de credenciales con enfoque hexagonal, aprobacion y auditoria.
 
 ## Caracteristicas
 
 - Autenticacion JWT con roles (`ADMIN`, `OPERATOR`, `VIEWER`).
 - Gestion de usuarios (listar, registrar, cambiar rol, desactivar).
-- Lectura IMAP de correos con polling, filtros y extraccion de OTP.
-- Solicitudes de ticket con metadata (persona, email, plataforma, curso).
-- Tarjetas de Teams con enlaces de aprobacion firmados y expirables.
-- Endpoint de aprobacion para acciones `approve` / `reject` / `details`.
-- Auditoria de eventos sobre solicitudes y acciones.
+- Solicitudes de credenciales con metadata (email, plataforma, curso, motivo).
+- Flujo de aprobacion y rechazo con token firmado y expiracion.
+- Endpoints publicos, administrativos e integracion para ejecutar decisiones.
+- Auditoria de eventos de creacion y decision de solicitudes.
 
 ## Requisitos
 
 - Node.js 20+
-- Cuenta de correo con IMAP habilitado para el flujo OTP.
-- Webhook de Microsoft Teams habilitado.
 - PostgreSQL y Redis disponibles (por docker compose o infraestructura propia).
 
 ## Instalacion
@@ -35,10 +32,7 @@ Variables clave:
 - `DATABASE_URL`
 - `REDIS_URL`
 - `APP_JWT_SECRET`, `AUTH_TOKEN_TTL_MINUTES`, `AUTH_JWT_ISSUER`, `AUTH_JWT_AUDIENCE`
-- `MAIL_HOST`, `MAIL_PORT`, `MAIL_USER`, `MAIL_PASSWORD`, `MAIL_MAILBOX`
-- `MAIL_ALLOWED_FROM`, `MAIL_SUBJECT_KEYWORDS`, `OTP_REGEX_PATTERNS`, `OTP_TTL_MINUTES`
-- `APP_ENABLE_POLLING`, `APP_POLLING_INTERVAL_SECONDS`
-- `TEAMS_WEBHOOK_URL`, `TEAMS_MESSAGE_TEMPLATE`
+- `TEAMS_WEBHOOK_URL`
 - `APP_ADMIN_PANEL_BASE_URL`, `APP_APPROVAL_LINK_SECRET`, `APP_APPROVAL_LINK_TTL_MINUTES`
 
 ## Ejecucion
@@ -67,22 +61,22 @@ npm test
 
 ```
 src/
-  auth/         - autenticacion, roles, usuarios
+  contexts/
+    admin-auth/          - autenticacion y sesion administrativa
+    credential-requests/ - dominio, application, adapters e infraestructura
   config/       - env y configuracion tipada
-  database/     - prisma y repositorios
+  database/     - prisma y acceso base
   security/     - cifrado y hashing
-  settings/     - perfiles y validaciones
-  teams/        - notificacion y adaptive cards
-  workflow/     - solicitudes, aprobacion y auditoria
+  observability/ - salud y metricas
 ```
 
 ## Flujo
 
-1. Un usuario autenticado crea una solicitud en `/api/tickets/requests`.
-2. La solicitud queda en estado `pending` y se envia una tarjeta a Teams con enlaces firmados.
-3. El aprobador abre `/api/approvals/:token`, revisa detalles y ejecuta `approve` o `reject`.
-4. El estado se actualiza y queda trazado en auditoria.
-5. En paralelo, el polling de correo sigue leyendo IMAP, extrayendo OTP y publicando a Teams cuando `APP_ENABLE_POLLING=true`.
+1. Un actor crea una solicitud en `/api/public/credential-requests`.
+2. Un administrador lista y revisa en `/api/admin/credential-requests`.
+3. El administrador decide con `/api/admin/credential-requests/:id/approve` o `/api/admin/credential-requests/:id/reject`.
+4. Integraciones pueden ejecutar decision por token en `/api/integrations/approvals/:token/execute`.
+5. Cada cambio queda auditado en la bitacora de eventos.
 
 ## Seguridad
 

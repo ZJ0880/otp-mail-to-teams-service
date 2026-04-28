@@ -1,0 +1,3 @@
+export const CLOCK_PORT = Symbol("CLOCK_PORT");
+export const ID_GENERATOR_PORT = Symbol("ID_GENERATOR_PORT");
+export const APPROVAL_TOKEN_SERVICE_PORT = Symbol("APPROVAL_TOKEN_SERVICE_PORT");

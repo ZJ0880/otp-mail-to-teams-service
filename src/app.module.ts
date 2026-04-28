@@ -9,6 +9,7 @@ import { SecurityModule } from "./security/security.module";
 import { TeamsModule } from "./teams/teams.module";
 import { ObservabilityModule } from "./observability/observability.module";
 import { AdminAuthModule } from "./contexts/admin-auth/infrastructure/nest/admin-auth.module";
+import { CredentialRequestsHttpModule } from "./contexts/credential-requests/infrastructure/nest/credential-requests-http.module";
 import { UsersModule } from "./contexts/users/infrastructure/nest/users.module";
 
 @Module({
@@ -25,6 +26,7 @@ import { UsersModule } from "./contexts/users/infrastructure/nest/users.module";
     MailModule,
     OtpModule,
     TeamsModule,
+    CredentialRequestsHttpModule,
     ObservabilityModule,
   ],
 })
